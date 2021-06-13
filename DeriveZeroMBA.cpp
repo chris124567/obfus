@@ -13,26 +13,27 @@
 
 // implementation of https://link.springer.com/chapter/10.1007/F978-3-540-77535-5_5
 
-std::tuple<arma::mat, arma::vec> GenerateMBA(const int vars_count) {
-    arma::mat F(1 << vars_count, vars_count);
+std::tuple<arma::fmat, arma::fvec> GenerateSolution(const unsigned int vars_count) {
     while (true) {
+        arma::fmat F(1 << vars_count, vars_count);
         for (size_t i = 0; i < F.n_rows; i++) {
+            // truth table
             F(i, 0) = (i >> (vars_count - 1)) & 1;
-        }
-        for (size_t i = 0; i < F.n_rows; i++) {
+            // random data
             for (size_t j = 1; j < F.n_cols; j++) {
                 F(i, j) = std::rand() % 2;
             }
         }
 
-        arma::mat solutions = arma::null(F);
-        if (!solutions.is_vec() || solutions.n_cols == 0) {
+        const arma::fmat &solutions = arma::null(F);
+        if (solutions.n_cols == 0) {
             continue;
         }
 
         bool has_zero = false;
-        solutions.for_each([&has_zero](arma::mat::elem_type &val) {
-            if (val == 0) {
+        solutions.for_each([&has_zero](const auto val) {
+            // if value is approximately 0
+            if (val > -0.01 && val < 0.01) {
                 has_zero = true;
             }
         });
@@ -42,29 +43,26 @@ std::tuple<arma::mat, arma::vec> GenerateMBA(const int vars_count) {
     }
 }
 
-z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::vec &table) {
-    const int vars_count = vars.size();
+z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fvec &table) {
+    const unsigned int vars_count = vars.size();
 
     z3::expr start_expr(ctx);
     for (size_t i = 0; i < table.size(); i++) {
         if (table.at(i) == 1) {
             z3::expr row_expr(ctx);
 
-            for (int j = 0; j < vars_count; j++) {
-                const int x = (i >> (vars_count - j - 1)) & 1;
-                const auto cur = (x == 0) ? ~vars.at(j) : vars.at(j);
-
-                if (!bool(row_expr)) {
-                    row_expr = cur;
-                } else {
-                    row_expr = row_expr & cur;
-                }
+            // convert to SOP form
+            for (unsigned int j = 0; j < vars_count; j++) {
+                const auto &cur = (((i >> (vars_count - j - 1)) & 1) == 0) ? ~vars.at(j) : vars.at(j);
+                // if we dont have anything for the row expression assign it
+                // to the current variable.  if we do have something AND it with
+                // the current variable
+                row_expr = (!bool(row_expr)) ? cur : (row_expr & cur);
             }
-            if (!bool(start_expr)) {
-                start_expr = row_expr;
-            } else {
-                start_expr = start_expr | row_expr;
-            }
+            // if we dont have anything for the start expression assign it
+            // to the current variable.  if we do have something OR it with
+            // the current variable
+            start_expr = (!bool(start_expr)) ? row_expr : (start_expr | row_expr);
         }
     }
     // if we never assign start_expr to anything, just assign it to 0
@@ -74,20 +72,14 @@ z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, 
     return start_expr;
 }
 
-z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::mat &F, const arma::vec &sol_matrix) {
+z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
     z3::expr start(ctx);
     for (size_t i = 0; i < F.n_cols; i++) {
-        z3::expr res(ctx);
-        const auto col_form = TableToExpression(ctx, vars, F.col(i));
+        const auto &col_form = TableToExpression(ctx, vars, F.col(i));
 
         // armadillo often gives us nullspace values like [-.57, -.57, .57] but we can just do (in this case) [-1, -1, 1] to simplify things
         const int scalar = sol_matrix.at(i) > 0 ? 1 : -1;
-
-        if (!bool(start)) {
-            res = col_form * ctx.bv_val(int(scalar), 64);
-        } else {
-            res = col_form;
-        }
+        const auto &res = (!bool(start)) ? (col_form * ctx.bv_val(int(scalar), 64)) : col_form;
 
         if (!bool(start)) {
             start = res;
@@ -103,14 +95,16 @@ z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const 
 }
 
 int main(void) {
-    // srand(3);
-    srand(time(nullptr));
+    // const constexpr auto seed = 0;
+    const auto seed = std::time(nullptr);
+    srand(seed);
+    arma::arma_rng::set_seed(seed);
 
     z3::context ctx;
 
     // initialize variables
     std::vector<z3::expr> vars;
-    constexpr const int kNumVars = 3;
+    constexpr const unsigned int kNumVars = 3;
     if (kNumVars != 2 && kNumVars != 3) {
         std::cout << "Using 1 variable breaks code and using more than 3 variables drastically worsens performs and breaks some of the code here" << std::endl;
         exit(EXIT_FAILURE);
@@ -118,19 +112,21 @@ int main(void) {
 
     // go through the alphabet for variable names
     char c = 'a';
-    for (int i = 0; i < kNumVars; i++) {
+    for (unsigned int i = 0; i < kNumVars; i++) {
         vars.push_back(ctx.bv_const(std::string(1, c++).c_str(), 64));
     }
 
     z3::solver solver(ctx);
-    for (int i = 0; i < 100; i++) {
-        const auto [F, sol_matrix] = GenerateMBA(kNumVars);
+    for (int i = 0; i < 1000; i++) {
+        const auto [F, sol_matrix] = GenerateSolution(kNumVars);
         const auto &identity = MBAIdentity(ctx, vars, F, sol_matrix);
-        // std::cout << "Expression: " << identity << std::endl;
+        // std::cout << "Expression:\n" << identity << std::endl;
 
         solver.reset();
         // ensure the identity is always 0
         solver.add((identity != 0));
+        std::cout << "smt2:\n"
+                  << solver.to_smt2() << std::endl;
         switch (solver.check()) {
             case z3::sat:
                 std::cout << "Invalid MBA identity: " << solver.get_model() << std::endl;
@@ -142,6 +138,7 @@ int main(void) {
                 break;
             case z3::unknown:
                 std::cout << "Unknown!" << std::endl;
+                exit(EXIT_FAILURE);
                 break;
         }
     }
