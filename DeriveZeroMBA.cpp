@@ -12,48 +12,17 @@
 #include <vector>
 
 // implementation of https://link.springer.com/chapter/10.1007/F978-3-540-77535-5_5
-std::vector<int> GenerateTable(int vars_count, std::function<int(std::vector<int>)> lambda) {
-    std::vector<int> table;
-    std::vector<int> row;
-    for (int i = 0; i < (1 << vars_count); i++) {
-        row.clear();
-        for (int j = 0; j < vars_count; j++) {
-            row.push_back((i >> (vars_count - j - 1)) & 1);
-        }
-        table.push_back(lambda(row));
-    }
-    return table;
-}
 
-std::vector<int> GenerateTableTrue(int vars_count, int i) {
-    return GenerateTable(vars_count, [i](std::vector<int> xs) { return xs.at(i); });
-}
-
-std::vector<int> GenerateTableBinaryOperator(int vars_count, std::function<int(int, int)> func) {
-    return GenerateTable(vars_count, [func](std::vector<int> xs) { return std::accumulate(xs.begin(), xs.end(), xs.at(0), func); });
-}
-
-std::vector<int> GenerateTableRandom(int vars_count) {
-    std::vector<int> v(1 << vars_count);
-    std::generate(v.begin(), v.end(), [] { return std::rand() % 2; });
-    return v;
-}
-
-std::tuple<arma::mat, arma::vec> GenerateMBA(int vars_count) {
+std::tuple<arma::mat, arma::vec> GenerateMBA(const int vars_count) {
+    arma::mat F(1 << vars_count, vars_count);
     while (true) {
-        const auto &table_true = GenerateTableTrue(vars_count, 0);
-        const auto &table_random1 = GenerateTableRandom(vars_count);
-        const auto &table_random2 = GenerateTableRandom(vars_count);
-
-        arma::mat F(1 << vars_count, vars_count);
         for (size_t i = 0; i < F.n_rows; i++) {
-            F(i, 0) = table_true.at(i);
+            F(i, 0) = (i >> (vars_count - 1)) & 1;
         }
         for (size_t i = 0; i < F.n_rows; i++) {
-            F(i, 1) = table_random1.at(i);
-        }
-        for (size_t i = 0; i < F.n_rows; i++) {
-            F(i, 2) = table_random2.at(i);
+            for (size_t j = 1; j < F.n_cols; j++) {
+                F(i, j) = std::rand() % 2;
+            }
         }
 
         arma::mat solutions = arma::null(F);
@@ -73,8 +42,8 @@ std::tuple<arma::mat, arma::vec> GenerateMBA(int vars_count) {
     }
 }
 
-z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, arma::vec table) {
-    int vars_count = log2(table.size());
+z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::vec &table) {
+    const int vars_count = vars.size();
 
     z3::expr start_expr(ctx);
     for (size_t i = 0; i < table.size(); i++) {
@@ -83,11 +52,7 @@ z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, 
 
             for (int j = 0; j < vars_count; j++) {
                 const int x = (i >> (vars_count - j - 1)) & 1;
-                auto cur = vars.at(j);
-
-                if (x == 0) {
-                    cur = ~cur;
-                }
+                const auto cur = (x == 0) ? ~vars.at(j) : vars.at(j);
 
                 if (!bool(row_expr)) {
                     row_expr = cur;
@@ -102,37 +67,26 @@ z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, 
             }
         }
     }
+    // if we never assign start_expr to anything, just assign it to 0
     if (!bool(start_expr)) {
         start_expr = ctx.bv_val(0, 64);
     }
     return start_expr;
 }
 
-z3::expr MBAIdentity(z3::context &ctx, int vars_count, arma::mat F, arma::vec sol_matrix) {
-    std::vector<z3::expr> vars;
-    for (int i = 0; i < vars_count; i++) {
-        vars.push_back(ctx.bv_const(("vars[" + std::to_string(i) + "]").c_str(), 64));
-    }
-
+z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::mat &F, const arma::vec &sol_matrix) {
     z3::expr start(ctx);
     for (size_t i = 0; i < F.n_cols; i++) {
         z3::expr res(ctx);
         const auto col_form = TableToExpression(ctx, vars, F.col(i));
 
-        float scalar = sol_matrix.at(i);
-        if (scalar > 0) {
-            scalar = 1;
-        } else if (scalar < 0) {
-            scalar = -1;
-        }
+        // armadillo often gives us nullspace values like [-.57, -.57, .57] but we can just do (in this case) [-1, -1, 1] to simplify things
+        const int scalar = sol_matrix.at(i) > 0 ? 1 : -1;
 
         if (!bool(start)) {
-            // dont complicate things by multiplying by 1 since it doesn't change anything
-            if (scalar < 1) {
-                res = col_form * ctx.bv_val(int(scalar), 64);
-            }
+            res = col_form * ctx.bv_val(int(scalar), 64);
         } else {
-            res = col_form * ctx.bv_val(std::abs(int(scalar)), 64);
+            res = col_form;
         }
 
         if (!bool(start)) {
@@ -149,24 +103,38 @@ z3::expr MBAIdentity(z3::context &ctx, int vars_count, arma::mat F, arma::vec so
 }
 
 int main(void) {
-    // srand(0);
+    // srand(3);
     srand(time(nullptr));
 
-    while (true) {
-        z3::context ctx;
-        constexpr const int kNumVars = 3;
+    z3::context ctx;
+
+    // initialize variables
+    std::vector<z3::expr> vars;
+    constexpr const int kNumVars = 3;
+    if (kNumVars != 2 && kNumVars != 3) {
+        std::cout << "Using 1 variable breaks code and using more than 3 variables drastically worsens performs and breaks some of the code here" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // go through the alphabet for variable names
+    char c = 'a';
+    for (int i = 0; i < kNumVars; i++) {
+        vars.push_back(ctx.bv_const(std::string(1, c++).c_str(), 64));
+    }
+
+    z3::solver solver(ctx);
+    for (int i = 0; i < 100; i++) {
         const auto [F, sol_matrix] = GenerateMBA(kNumVars);
-        const auto &identity = MBAIdentity(ctx, kNumVars, F, sol_matrix);
-        std::cout << "Expression:\n" << identity << std::endl;
+        const auto &identity = MBAIdentity(ctx, vars, F, sol_matrix);
+        // std::cout << "Expression: " << identity << std::endl;
 
-        const auto &conjecture = (identity != 0);
-
-        z3::solver solver(ctx);
-        solver.add(conjecture);
+        solver.reset();
+        // ensure the identity is always 0
+        solver.add((identity != 0));
         switch (solver.check()) {
             case z3::sat:
                 std::cout << "Invalid MBA identity: " << solver.get_model() << std::endl;
-                // std::cout << "Failure!" << std::endl;
+                std::cout << "Failure!" << std::endl;
                 exit(EXIT_FAILURE);
                 break;
             case z3::unsat:
