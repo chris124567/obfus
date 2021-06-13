@@ -41,8 +41,8 @@ static constexpr const int testArrayAnd[7] = {-6, 0, 0, 1, 0, 0, 0};
 TEST(BinaryOperators, BinaryOperators) {
     // iterate over subarrays in testArray
     for (int i = 0; i < sizeof(testArray) / sizeof(testArray[0]); i++) {
-        auto const x = testArray[i][0];
-        auto const y = testArray[i][1];
+        const auto x = testArray[i][0];
+        const auto y = testArray[i][1];
         EXPECT_EQ(testArrayAdd[i], add(x, y));
         EXPECT_EQ(testArraySub[i], sub(x, y));
         EXPECT_EQ(testArrayXor[i], xor1(x, y));
@@ -51,7 +51,7 @@ TEST(BinaryOperators, BinaryOperators) {
     }
 };
 
-// TODO: exempt this function somehow???
+// TODO: exempt this function from transforms somehow???
 TEST(ConstantCalculation, ConstantCalculation) {
     EXPECT_EQ(5000, return5000());
 };

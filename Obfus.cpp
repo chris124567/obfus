@@ -10,7 +10,7 @@
 
 using namespace llvm;
 
-static bool transformIntegerConstants(BasicBlock &BB) {
+static bool TransformIntegerConstants(BasicBlock &BB) {
     bool changed = false;
 
     // see https://sci-hub.ee/https://link.springer.com/chapter/10.1007/978-3-540-77535-5_5
@@ -21,26 +21,26 @@ static bool transformIntegerConstants(BasicBlock &BB) {
     return changed;
 }
 
-static bool transformBinaryOperatorBasicBlock(BasicBlock &BB) {
+static bool TransformBinaryOperatorBasicBlock(BasicBlock &BB) {
     bool changed = false;
 
     for (auto I = BB.begin(); I != BB.end(); ++I) {
         // Skip non-binary (e.g. unary or compare) instructions
-        const auto binOp = dyn_cast<BinaryOperator>(I);
-        if (!binOp) {
+        const auto bin_op = dyn_cast<BinaryOperator>(I);
+        if (!bin_op) {
             continue;
         }
 
-        IRBuilder<> builder(binOp);
+        IRBuilder<> builder(bin_op);
 
         // useful variables in building the instruction for substitution
-        const auto &valNegative1 = ConstantInt::get(binOp->getType(), -1);
-        const auto &val1 = ConstantInt::get(binOp->getType(), 1);
-        const auto &val2 = ConstantInt::get(binOp->getType(), 2);
-        const auto &x = binOp->getOperand(0);
-        const auto &y = binOp->getOperand(1);
+        const auto &val_negative_1 = ConstantInt::get(bin_op->getType(), -1);
+        const auto &val_1 = ConstantInt::get(bin_op->getType(), 1);
+        const auto &val_2 = ConstantInt::get(bin_op->getType(), 2);
+        const auto &x = bin_op->getOperand(0);
+        const auto &y = bin_op->getOperand(1);
 
-        Value *newValue = nullptr;
+        Value *new_value = nullptr;
         /*
 Compiled from various stackoverflow posts and some experimentation
 
@@ -59,7 +59,7 @@ To test proofs, run this first (python):
             >>> z3.prove(((x ^ y) + 2*(x & y)) == (x + y))
             proved
                 */
-                newValue = builder.CreateAdd(builder.CreateXor(x, y), builder.CreateMul(val2, builder.CreateAnd(x, y)));
+                new_value = builder.CreateAdd(builder.CreateXor(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
                 break;
             case Instruction::Sub:
 #ifdef DEBUG
@@ -70,7 +70,7 @@ To test proofs, run this first (python):
             >>> z3.prove((x - y) == (x + ((y^-1) + 1)))
             proved
                 */
-                newValue = builder.CreateAdd(x, builder.CreateAdd(builder.CreateXor(y, valNegative1), val1));
+                new_value = builder.CreateAdd(x, builder.CreateAdd(builder.CreateXor(y, val_negative_1), val_1));
                 break;
             case Instruction::Xor:
 #ifdef DEBUG
@@ -81,7 +81,7 @@ To test proofs, run this first (python):
             >>> z3.prove(((x|y) - (x&y)) == (x^y))
             proved
                 */
-                newValue = builder.CreateSub(builder.CreateOr(x, y), builder.CreateAnd(x, y));
+                new_value = builder.CreateSub(builder.CreateOr(x, y), builder.CreateAnd(x, y));
                 break;
             case Instruction::Or:
 #ifdef DEBUG
@@ -92,7 +92,7 @@ To test proofs, run this first (python):
             >>> z3.prove((x | y) == ((x ^ y) ^ (x & y)))
             proved
                 */
-                newValue = builder.CreateXor(builder.CreateXor(x, y), builder.CreateAnd(x, y));
+                new_value = builder.CreateXor(builder.CreateXor(x, y), builder.CreateAnd(x, y));
                 break;
             case Instruction::And:
 #ifdef DEBUG
@@ -103,12 +103,12 @@ To test proofs, run this first (python):
             >>> z3.prove((-1 - ((-1 - x) | (-1 - y))) == (x & y))
             proved
                 */
-                newValue = builder.CreateSub(valNegative1, builder.CreateOr(builder.CreateSub(valNegative1, x), builder.CreateSub(valNegative1, y)));
+                new_value = builder.CreateSub(val_negative_1, builder.CreateOr(builder.CreateSub(val_negative_1, x), builder.CreateSub(val_negative_1, y)));
                 break;
         }
         // if we have something to replace the instruction with, replace it
-        if (newValue) {
-            binOp->replaceAllUsesWith(newValue);
+        if (new_value) {
+            bin_op->replaceAllUsesWith(new_value);
             changed = true;
         }
     }
@@ -119,8 +119,8 @@ PreservedAnalyses Obfus::run(Function &F, FunctionAnalysisManager &) {
     bool changed = false;
 
     for (auto &BB : F) {
-        changed |= transformBinaryOperatorBasicBlock(BB);
-        changed |= transformIntegerConstants(BB);
+        changed |= TransformBinaryOperatorBasicBlock(BB);
+        changed |= TransformIntegerConstants(BB);
     }
 #ifdef DEBUG
     if (changed) {
