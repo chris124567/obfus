@@ -1,3 +1,5 @@
+#include "DeriveZeroMBA.hpp"
+
 #include <z3++.h>
 
 #include <armadillo>
@@ -12,8 +14,7 @@
 #include <vector>
 
 // implementation of https://link.springer.com/chapter/10.1007/F978-3-540-77535-5_5
-
-std::tuple<arma::fmat, arma::fvec> GenerateSolution(const unsigned int vars_count) {
+static std::tuple<arma::fmat, arma::fvec> GenerateSolution(const unsigned int vars_count) {
     while (true) {
         arma::fmat F(1 << vars_count, vars_count);
         for (size_t i = 0; i < F.n_rows; i++) {
@@ -43,7 +44,7 @@ std::tuple<arma::fmat, arma::fvec> GenerateSolution(const unsigned int vars_coun
     }
 }
 
-z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fvec &table) {
+static z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fvec &table) {
     const unsigned int vars_count = vars.size();
 
     z3::expr start_expr(ctx);
@@ -72,7 +73,7 @@ z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, 
     return start_expr;
 }
 
-z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
+static z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
     z3::expr start(ctx);
     for (size_t i = 0; i < F.n_cols; i++) {
         const auto &col_form = TableToExpression(ctx, vars, F.col(i));
@@ -94,54 +95,59 @@ z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const 
     return start;
 }
 
-int main(void) {
-    // const constexpr auto seed = 0;
-    const auto seed = std::time(nullptr);
-    srand(seed);
-    arma::arma_rng::set_seed(seed);
-
-    z3::context ctx;
-
-    // initialize variables
-    std::vector<z3::expr> vars;
-    constexpr const unsigned int kNumVars = 3;
-    if (kNumVars != 2 && kNumVars != 3) {
-        std::cout << "Using 1 variable breaks code and using more than 3 variables drastically worsens performs and breaks some of the code here" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    // go through the alphabet for variable names
-    char c = 'a';
-    for (unsigned int i = 0; i < kNumVars; i++) {
-        vars.push_back(ctx.bv_const(std::string(1, c++).c_str(), 64));
-    }
-
-    z3::solver solver(ctx);
-    for (int i = 0; i < 1000; i++) {
-        const auto [F, sol_matrix] = GenerateSolution(kNumVars);
-        const auto &identity = MBAIdentity(ctx, vars, F, sol_matrix);
-        // std::cout << "Expression:\n" << identity << std::endl;
-
-        solver.reset();
-        // ensure the identity is always 0
-        solver.add((identity != 0));
-        std::cout << "smt2:\n"
-                  << solver.to_smt2() << std::endl;
-        switch (solver.check()) {
-            case z3::sat:
-                std::cout << "Invalid MBA identity: " << solver.get_model() << std::endl;
-                std::cout << "Failure!" << std::endl;
-                exit(EXIT_FAILURE);
-                break;
-            case z3::unsat:
-                std::cout << "Success!" << std::endl;
-                break;
-            case z3::unknown:
-                std::cout << "Unknown!" << std::endl;
-                exit(EXIT_FAILURE);
-                break;
-        }
-    }
-
-    return EXIT_SUCCESS;
+z3::expr GenerateRandomMBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars) {
+    const auto [F, sol_matrix] = GenerateSolution(vars.size());
+    return MBAIdentity(ctx, vars, F, sol_matrix);
 }
+
+// int main(void) {
+//     // const constexpr auto seed = 0;
+//     const auto seed = std::time(nullptr);
+//     srand(seed);
+
+//     z3::context ctx;
+
+//     // initialize variables
+//     std::vector<z3::expr> vars;
+//     constexpr const unsigned int kNumVars = 3;
+//     if (kNumVars != 2 && kNumVars != 3) {
+//         std::cout << "Using 1 variable breaks code and using more than 3 variables drastically worsens performs and breaks some of the code here" << std::endl;
+//         exit(EXIT_FAILURE);
+//     }
+
+//     // go through the alphabet for variable names
+//     char c = 'a';
+//     for (unsigned int i = 0; i < kNumVars; i++) {
+//         vars.push_back(ctx.bv_const(std::string(1, c++).c_str(), 64));
+//     }
+
+//     z3::solver solver(ctx);
+//     for (int i = 0; i < 100; i++) {
+//         const auto [F, sol_matrix] = GenerateSolution(kNumVars);
+//         const auto &identity = MBAIdentity(ctx, vars, F, sol_matrix);
+//         std::cout << "Expression:\n"
+//                   << identity << std::endl;
+
+//         solver.reset();
+//         // ensure the identity is always 0
+//         solver.add((identity != 0));
+//         // std::cout << "smt2:\n"
+//         //           << solver.to_smt2() << std::endl;
+//         switch (solver.check()) {
+//             case z3::sat:
+//                 std::cout << "Invalid MBA identity: " << solver.get_model() << std::endl;
+//                 std::cout << "Failure!" << std::endl;
+//                 exit(EXIT_FAILURE);
+//                 break;
+//             case z3::unsat:
+//                 std::cout << "Success!" << std::endl;
+//                 break;
+//             case z3::unknown:
+//                 std::cout << "Unknown!" << std::endl;
+//                 exit(EXIT_FAILURE);
+//                 break;
+//         }
+//     }
+
+//     return EXIT_SUCCESS;
+// }
