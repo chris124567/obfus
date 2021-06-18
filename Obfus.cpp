@@ -249,10 +249,14 @@ extern "C" LLVM_ATTRIBUTE_WEAK ::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "Obfus Pass", LLVM_VERSION_STRING,
             [](PassBuilder &PB) {
-                srand(0);
+                constexpr const auto seed = 0;
+                srand(seed);
 
-                z3::set_param("pp.min_alias_size", 999999);
-                z3::set_param("pp.max_depth", 999999);
+                // configure z3
+                z3::set_param("sat.random_seed", seed);
+                // dont split expressions with intermediate variables (let a!1...) when printing
+                z3::set_param("pp.min_alias_size", 1000);
+                z3::set_param("pp.max_depth", 1000);
 
                 // initialize z3 variables
                 // go through the alphabet for variable names
