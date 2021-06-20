@@ -1,6 +1,6 @@
 #include "DeriveZeroMBA.hpp"
 
-#include <z3++.h>
+#include <llvm/IR/IRBuilder.h>
 
 #include <armadillo>
 #include <array>
@@ -44,110 +44,58 @@ static std::tuple<arma::fmat, arma::fvec> GenerateSolution(const unsigned int va
     }
 }
 
-static z3::expr TableToExpression(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fvec &table) {
+static llvm::Value *TableToExpression(llvm::IRBuilder<> &builder, const std::vector<llvm::Value *> &vars, const arma::fvec &table) {
     const unsigned int vars_count = vars.size();
 
-    z3::expr start_expr(ctx);
+    llvm::Value *start_expr = nullptr;
     for (size_t i = 0; i < table.size(); i++) {
         if (table.at(i) == 1) {
-            z3::expr row_expr(ctx);
+            llvm::Value *row_expr = nullptr;
 
             // convert to SOP form
             for (unsigned int j = 0; j < vars_count; j++) {
-                const auto &cur = (((i >> (vars_count - j - 1)) & 1) == 0) ? ~vars.at(j) : vars.at(j);
+                const auto cur = (((i >> (vars_count - j - 1)) & 1) == 0) ? builder.CreateNot(vars.at(j)) : vars.at(j);
                 // if we dont have anything for the row expression assign it
                 // to the current variable.  if we do have something AND it with
                 // the current variable
-                row_expr = (!bool(row_expr)) ? cur : (row_expr & cur);
+                row_expr = (!row_expr) ? cur : (builder.CreateAnd(row_expr, cur));
             }
             // if we dont have anything for the start expression assign it
             // to the current variable.  if we do have something OR it with
             // the current variable
-            start_expr = (!bool(start_expr)) ? row_expr : (start_expr | row_expr);
+            start_expr = (!start_expr) ? row_expr : (builder.CreateOr(start_expr, row_expr));
         }
-    }
-    // if we never assign start_expr to anything, just assign it to 0
-    if (!bool(start_expr)) {
-        start_expr = ctx.bv_val(0, 64);
     }
     return start_expr;
 }
 
-static z3::expr MBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
-    z3::expr start(ctx);
+static llvm::Value *MBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
+    llvm::LLVMContext *llvmcx;
+    static llvm::LLVMContext MyGlobalContext;
+    llvmcx = &MyGlobalContext;
+    llvm::Value *start = nullptr;
     for (size_t i = 0; i < F.n_cols; i++) {
-        const auto &col_form = TableToExpression(ctx, vars, F.col(i));
-
-        // armadillo often gives us nullspace values like [-.57, -.57, .57] but we can just do (in this case) [-1, -1, 1] to simplify things
+        const auto col_form = TableToExpression(builder, vars, F.col(i));
+        llvm::errs() << "col_form: " << col_form << "\n";
+        // armadillo often gives us nullspace values like [-.57, -.57, .57] but we can just do (in this case) [-1, -1, 1] to simplify things because we're basically just multiplying by a scalar constant so F*v=0 holds
         const int scalar = sol_matrix.at(i) > 0 ? 1 : -1;
-        const auto &res = (!bool(start)) ? (col_form * ctx.bv_val(int(scalar), 64)) : col_form;
+        const auto res = (!start) ? builder.CreateMul(col_form, llvm::ConstantInt::get(type, scalar)) : col_form;
 
         if (!bool(start)) {
             start = res;
         } else {
             if (scalar > 0) {
-                start = start + res;
+                start = builder.CreateAdd(start, res);
             } else {
-                start = start - res;
+                start = builder.CreateSub(start, res);
             }
         }
-    };
+    }
     return start;
 }
 
-z3::expr GenerateRandomMBAIdentity(z3::context &ctx, const std::vector<z3::expr> &vars) {
+llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars) {
     const auto [F, sol_matrix] = GenerateSolution(vars.size());
-    return MBAIdentity(ctx, vars, F, sol_matrix);
+
+    return MBAIdentity(builder, type, vars, F, sol_matrix);
 }
-
-// int main(void) {
-//     // const constexpr auto seed = 0;
-//     const auto seed = std::time(nullptr);
-//     srand(seed);
-
-//     z3::context ctx;
-
-//     // initialize variables
-//     std::vector<z3::expr> vars;
-//     constexpr const unsigned int kNumVars = 3;
-//     if (kNumVars != 2 && kNumVars != 3) {
-//         std::cout << "Using 1 variable breaks code and using more than 3 variables drastically worsens performs and breaks some of the code here" << std::endl;
-//         exit(EXIT_FAILURE);
-//     }
-
-//     // go through the alphabet for variable names
-//     char c = 'a';
-//     for (unsigned int i = 0; i < kNumVars; i++) {
-//         vars.push_back(ctx.bv_const(std::string(1, c++).c_str(), 64));
-//     }
-
-//     z3::solver solver(ctx);
-//     for (int i = 0; i < 100; i++) {
-//         const auto [F, sol_matrix] = GenerateSolution(kNumVars);
-//         const auto &identity = MBAIdentity(ctx, vars, F, sol_matrix);
-//         std::cout << "Expression:\n"
-//                   << identity << std::endl;
-
-//         solver.reset();
-//         // ensure the identity is always 0
-//         solver.add((identity != 0));
-//         // std::cout << "smt2:\n"
-//         //           << solver.to_smt2() << std::endl;
-//         switch (solver.check()) {
-//             case z3::sat:
-//                 std::cout << "Invalid MBA identity: " << solver.get_model() << std::endl;
-//                 std::cout << "Failure!" << std::endl;
-//                 exit(EXIT_FAILURE);
-//                 break;
-//             case z3::unsat:
-//                 std::cout << "Success!" << std::endl;
-//                 break;
-//             case z3::unknown:
-//                 std::cout << "Unknown!" << std::endl;
-//                 exit(EXIT_FAILURE);
-//                 break;
-//         }
-//     }
-
-//     return EXIT_SUCCESS;
-// }
