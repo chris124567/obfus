@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,10 +30,18 @@ int __attribute__((optnone)) and1(const int x, const int y) {
 }
 
 int __attribute__((optnone)) password(const int input) {
-    if (input >= 0) {
+    if (input >= 0 && input < 5 && (input & 1) == 0) {
         return 1337;
     } else {
         return -1;
+    }
+}
+
+uint8_t __attribute__((optnone)) password8(const uint8_t input) {
+    if (input >= 0 && input < 5 && (input & 1) == 0) {
+        return 111;
+    } else {
+        return 0;
     }
 }
 
@@ -63,10 +72,22 @@ int main(void) {
         EXPECT_EQ("or", testArrayOr[i], or1(x, y));
         EXPECT_EQ("and", testArrayAnd[i], and1(x, y));
     }
-    EXPECT_EQ("password(5000)", password(5000), 1337);
-    EXPECT_EQ("password(0)", password(0), 1337);
+    EXPECT_EQ("password(-2)", password(-2), -1);
     EXPECT_EQ("password(-1)", password(-1), -1);
+    EXPECT_EQ("password(0)", password(0), 1337);
+    EXPECT_EQ("password(1)", password(1), -1);
+    EXPECT_EQ("password(2)", password(2), 1337);
+    EXPECT_EQ("password(3)", password(3), -1);
+    EXPECT_EQ("password(4)", password(4), 1337);
+    EXPECT_EQ("password(5000)", password(5000), -1);
+    EXPECT_EQ("password8(0)", password8(0), 111);
+    EXPECT_EQ("password8(1)", password8(1), 0);
+    EXPECT_EQ("password8(2)", password8(2), 111);
+    EXPECT_EQ("password8(3)", password8(3), 0);
+    EXPECT_EQ("password8(4)", password8(4), 111);
+
     EXPECT_EQ("return5000()", return5000(), 5000);
 
+    printf("Finished tests!\n");
     return EXIT_SUCCESS;
 }

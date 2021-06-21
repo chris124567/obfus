@@ -45,11 +45,12 @@ static bool TransformIntegerConstants(BasicBlock &BB) {
         }
 
         const auto same = (value_replace_index == 0) ? y : x;
-        // std::vector<Value *> vars{same, ConstantInt::get(value_replace->getType(), std::rand()), same};
-        std::vector<Value *> vars{same, ConstantInt::get(value_replace->getType(), std::rand()), ConstantInt::get(value_replace->getType(), std::rand())};
+        const auto int_type = value_replace->getType();
+        std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255), ConstantInt::get(int_type, std::rand() % 255)};
+        // std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255)};
 
         llvm::IRBuilder<> builder(icmp_op);
-        icmp_op->setOperand(value_replace_index, GenerateRandomMBAIdentity(builder, value_replace->getType(), vars));
+        icmp_op->setOperand(value_replace_index, GenerateRandomMBAIdentity(builder, int_type, vars));
         changed = true;
     }
 
@@ -73,18 +74,25 @@ static bool TransformBinaryOperatorBasicBlock(BasicBlock &BB) {
         const auto val_negative_2 = ConstantInt::get(bin_op->getType(), -2);
         const auto val_1 = ConstantInt::get(bin_op->getType(), 1);
         const auto val_2 = ConstantInt::get(bin_op->getType(), 2);
+        // const auto rand_1 = ConstantInt::get(bin_op->getType(), rand() % 255);
+        // const auto rand_2 = ConstantInt::get(bin_op->getType(), rand() % 255);
         const auto x = bin_op->getOperand(0);
         const auto y = bin_op->getOperand(1);
 
         Value *new_value = nullptr;
         /*
-Compiled from various stackoverflow posts and some experimentation
+Compiled from various stackoverflow posts and some experimentation.
+Only obfuscations that aren't simplified with -Ofast -flto -march=native
+are kept.  To see the disassembly of a function to verify this, run
+
+    gdb -batch -ex 'file ./test/test' -ex 'disassemble function_name'
+
 
 To test proofs, run this first (python):
 >>> import z3
 >>> x, y = z3.BitVecs('x y', 64)
         */
-        const auto rand = std::rand();
+        const int rand = std::rand();
 #ifdef DEBUG
         errs() << "Opcode: Instruction::" << I->getOpcodeName() << "\n";
 #endif
@@ -92,7 +100,6 @@ To test proofs, run this first (python):
         switch (I->getOpcode()) {
             case Instruction::Add:
                 /*
-            Replace addition with ((x ^ y) + 2*(x & y)) or ((x ^ y) - ((-2*x - 1) | (-2*y - 1)) -1) or (2*(x | y) - (~x & y) - (x & ~y))
             >>> z3.prove((x + y) == ((x ^ y) + 2*(x & y)))
             proved
             >>> z3.prove((x + y) == ((x ^ y) - ((-2*x - 1) | (-2*y - 1)) -1))
@@ -114,9 +121,6 @@ To test proofs, run this first (python):
                 break;
             case Instruction::Sub:
                 /*
-            Replace subtraction with (x + ((y^-1) + 1)) or ((x ^ (~y+1)) - ((-2*x - 1) | (2*y - 1)) - 1) or ((x & ~y) - (~x & y)) or (~(~x + y))
-            >>> z3.prove((x - y) == (x + ((y^-1) + 1)))
-            proved
             >>> z3.prove((x - y) == ((x ^ (~y+1)) - ((-2*x - 1) | (2*y - 1)) - 1))
             proved
             >>> z3.prove((x - y) == ((x & ~y) - (~x & y)))
@@ -126,47 +130,38 @@ To test proofs, run this first (python):
                 */
                 switch (rand % 3) {
                     case 0:
+                        // ((x ^ (~y+1)) - ((-2*x - 1) | (2*y - 1)) - 1)
                         new_value = builder.CreateSub(builder.CreateXor(x, builder.CreateAdd(builder.CreateNot(y), val_1)), builder.CreateAdd(builder.CreateOr(builder.CreateSub(builder.CreateMul(val_negative_2, x), val_1), builder.CreateSub(builder.CreateMul(val_2, y), val_1)), val_1));
                         break;
                     case 1:
+                        // ((x & ~y) - (~x & y))
                         new_value = builder.CreateSub(builder.CreateAnd(x, builder.CreateNot(y)), builder.CreateAnd(builder.CreateNot(x), y));
                         break;
                     case 2:
+                        // ~(~x + y)
                         new_value = builder.CreateNot(builder.CreateAdd(builder.CreateNot(x), y));
                         break;
                 }
                 break;
             case Instruction::Xor:
                 /*
-                Replace exclusive or with ((x|y) - (x&y)) or  (x + y - 2*(x & y))
-                >>> z3.prove((x ^ y) == ((x|y) - (x&y)))
-                proved
                 >>> z3.prove((x ^ y) == (x + y - 2*(x & y)))
                 proved
-                    */
+                */
                 new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
                 break;
             case Instruction::Or:
-
                 /*
-                Replace inclusive or with (x ^ y) ^ (x & y) or (x + y - (x & y))
-                >>> z3.prove((x | y) == ((x ^ y) ^ (x & y)))
-                proved
                 >>> z3.prove((x | y) == (x + y - (x & y)))
                 proved
-                    */
+                */
                 new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateAnd(x, y));
                 break;
             case Instruction::And:
                 /*
-                Replace and with (-1 - ((-1 - x) | (-1 - y))) or (x + y - (x|y)) or ((x | y) - (~x & y) - (x & ~y))
-                >>> z3.prove((x & y) == (-1 - ((-1 - x) | (-1 - y))))
-                proved
                 >>> z3.prove((x & y) == (x + y - (x|y)))
                 proved
-                >>> z3.prove((x & y) == ((x | y) - (~x & y) - (x & ~y)))
-                proved
-                    */
+                */
                 new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateOr(x, y));
                 break;
         }
@@ -188,8 +183,12 @@ PreservedAnalyses Obfus::run(Function &F, FunctionAnalysisManager &) {
 #endif
 
     for (auto &BB : F) {
+        // ORIGINAL ORDER:
         // changed |= TransformBinaryOperatorBasicBlock(BB);
+        // changed |= TransformIntegerConstants(BB);
+        // NEW ORDER:
         changed |= TransformIntegerConstants(BB);
+        changed |= TransformBinaryOperatorBasicBlock(BB);
     }
 
 #ifdef DEBUG
@@ -208,7 +207,7 @@ extern "C" LLVM_ATTRIBUTE_WEAK ::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "Obfus Pass", LLVM_VERSION_STRING,
             [](PassBuilder &PB) {
-                // constexpr const int seed = 1624216247;
+                // constexpr const int seed = 0;
                 const int seed = std::time(nullptr);
                 errs() << "Random seed: " << seed << "\n";
                 srand(seed);

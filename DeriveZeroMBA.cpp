@@ -70,13 +70,9 @@ static llvm::Value *TableToExpression(llvm::IRBuilder<> &builder, const std::vec
 }
 
 static llvm::Value *MBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars, const arma::fmat &F, const arma::fvec &sol_matrix) {
-    llvm::LLVMContext *llvmcx;
-    static llvm::LLVMContext MyGlobalContext;
-    llvmcx = &MyGlobalContext;
     llvm::Value *start = nullptr;
     for (size_t i = 0; i < F.n_cols; i++) {
         const auto col_form = TableToExpression(builder, vars, F.col(i));
-        llvm::errs() << "col_form: " << col_form << "\n";
         // armadillo often gives us nullspace values like [-.57, -.57, .57] but we can just do (in this case) [-1, -1, 1] to simplify things because we're basically just multiplying by a scalar constant so F*v=0 holds
         const int scalar = sol_matrix.at(i) > 0 ? 1 : -1;
         const auto res = (!start) ? builder.CreateMul(col_form, llvm::ConstantInt::get(type, scalar)) : col_form;
