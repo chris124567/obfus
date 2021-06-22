@@ -10,10 +10,6 @@ int __attribute__((optnone)) sub(const int x, const int y) {
     return x - y;
 }
 
-int __attribute__((optnone)) mul(const int x, const int y) {
-    return x * y;
-}
-
 /*
 "1" suffix after names to prevent weird clang-format glitch
 */
@@ -49,15 +45,10 @@ int __attribute__((optnone)) return5000(void) {
     return 5000;
 }
 
-int __attribute__((optnone)) return95(const int input) {
-    return input & 74 | 95;
-}
-
 /* TODO: codegen this */
 static const int testArray[7][2] = {{-5, -6}, {0, 0}, {1, -6}, {1, 1}, {1, 2}, {3, 4}, {2147483640, 7}};
 static const int testArrayAdd[7] = {-11, 0, -5, 2, 3, 7, 2147483647};
 static const int testArraySub[7] = {1, 0, 7, 0, -1, -1, 2147483633};
-static const int testArrayMul[7] = {30, 0, -6, 1, 2, 12, 2147483592};
 static const int testArrayXor[7] = {1, 0, -5, 0, 3, 7, 2147483647};
 static const int testArrayOr[7] = {-5, 0, -5, 1, 3, 7, 2147483647};
 static const int testArrayAnd[7] = {-6, 0, 0, 1, 0, 0, 0};
@@ -71,7 +62,6 @@ int main(void) {
         const int y = testArray[i][1];
         EXPECT_EQ("add", testArrayAdd[i], add(x, y));
         EXPECT_EQ("sub", testArraySub[i], sub(x, y));
-        EXPECT_EQ("mul", testArrayMul[i], mul(x, y));
         EXPECT_EQ("xor", testArrayXor[i], xor1(x, y));
         EXPECT_EQ("or", testArrayOr[i], or1(x, y));
         EXPECT_EQ("and", testArrayAnd[i], and1(x, y));
@@ -89,8 +79,6 @@ int main(void) {
     EXPECT_EQ("password8(2)", password8(2), 111);
     EXPECT_EQ("password8(3)", password8(3), 0);
     EXPECT_EQ("password8(4)", password8(4), 111);
-
-    EXPECT_EQ("return95(123)", return95(123), 95);
     EXPECT_EQ("return5000()", return5000(), 5000);
 
     printf("Finished tests!\n");
