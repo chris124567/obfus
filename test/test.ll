@@ -30,6 +30,7 @@ target triple = "x86_64-pc-linux-gnu"
 @.str.17 = private unnamed_addr constant [13 x i8] c"password8(2)\00", align 1
 @.str.18 = private unnamed_addr constant [13 x i8] c"password8(3)\00", align 1
 @.str.19 = private unnamed_addr constant [13 x i8] c"password8(4)\00", align 1
+@.str.20 = private unnamed_addr constant [14 x i8] c"return95(123)\00", align 1
 @str = private unnamed_addr constant [16 x i8] c"Finished tests!\00", align 1
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -195,236 +196,257 @@ define dso_local i32 @return5000() local_unnamed_addr #0 !dbg !147 {
   ret i32 5000, !dbg !150
 }
 
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @return95(i32 %0) local_unnamed_addr #0 !dbg !151 {
+  %2 = alloca i32, align 4
+  store i32 %0, i32* %2, align 4, !tbaa !36
+  call void @llvm.dbg.declare(metadata i32* %2, metadata !153, metadata !DIExpression()), !dbg !154
+  %3 = load i32, i32* %2, align 4, !dbg !155, !tbaa !36
+  %4 = and i32 %3, 74, !dbg !156
+  %5 = or i32 %4, 95, !dbg !157
+  ret i32 %5, !dbg !158
+}
+
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @main() local_unnamed_addr #2 !dbg !151 {
-  call void @llvm.dbg.value(metadata i32 0, metadata !153, metadata !DIExpression()), !dbg !160
-  br label %1, !dbg !161
+define dso_local i32 @main() local_unnamed_addr #2 !dbg !159 {
+  call void @llvm.dbg.value(metadata i32 0, metadata !161, metadata !DIExpression()), !dbg !168
+  br label %1, !dbg !169
 
 1:                                                ; preds = %54, %0
   %2 = phi i64 [ 0, %0 ], [ %55, %54 ]
-  call void @llvm.dbg.value(metadata i64 %2, metadata !153, metadata !DIExpression()), !dbg !160
-  %3 = getelementptr inbounds [7 x [2 x i32]], [7 x [2 x i32]]* @testArray, i64 0, i64 %2, i64 0, !dbg !162
-  %4 = load i32, i32* %3, align 8, !dbg !162, !tbaa !36
-  call void @llvm.dbg.value(metadata i32 %4, metadata !155, metadata !DIExpression()), !dbg !163
-  %5 = getelementptr inbounds [7 x [2 x i32]], [7 x [2 x i32]]* @testArray, i64 0, i64 %2, i64 1, !dbg !164
-  %6 = load i32, i32* %5, align 4, !dbg !164, !tbaa !36
-  call void @llvm.dbg.value(metadata i32 %6, metadata !159, metadata !DIExpression()), !dbg !163
-  %7 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayAdd, i64 0, i64 %2, !dbg !165
-  %8 = load i32, i32* %7, align 4, !dbg !165, !tbaa !36
-  %9 = tail call i32 @add(i32 %4, i32 %6), !dbg !165
-  %10 = icmp eq i32 %8, %9, !dbg !165
-  br i1 %10, label %14, label %11, !dbg !165
+  call void @llvm.dbg.value(metadata i64 %2, metadata !161, metadata !DIExpression()), !dbg !168
+  %3 = getelementptr inbounds [7 x [2 x i32]], [7 x [2 x i32]]* @testArray, i64 0, i64 %2, i64 0, !dbg !170
+  %4 = load i32, i32* %3, align 8, !dbg !170, !tbaa !36
+  call void @llvm.dbg.value(metadata i32 %4, metadata !163, metadata !DIExpression()), !dbg !171
+  %5 = getelementptr inbounds [7 x [2 x i32]], [7 x [2 x i32]]* @testArray, i64 0, i64 %2, i64 1, !dbg !172
+  %6 = load i32, i32* %5, align 4, !dbg !172, !tbaa !36
+  call void @llvm.dbg.value(metadata i32 %6, metadata !167, metadata !DIExpression()), !dbg !171
+  %7 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayAdd, i64 0, i64 %2, !dbg !173
+  %8 = load i32, i32* %7, align 4, !dbg !173, !tbaa !36
+  %9 = tail call i32 @add(i32 %4, i32 %6), !dbg !173
+  %10 = icmp eq i32 %8, %9, !dbg !173
+  br i1 %10, label %14, label %11, !dbg !173
 
 11:                                               ; preds = %1
-  %12 = tail call i32 @add(i32 %4, i32 %6), !dbg !165
-  %13 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0), i32 %8, i32 %12), !dbg !165
-  br label %14, !dbg !165
+  %12 = tail call i32 @add(i32 %4, i32 %6), !dbg !173
+  %13 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0), i32 %8, i32 %12), !dbg !173
+  br label %14, !dbg !173
 
 14:                                               ; preds = %1, %11
-  %15 = getelementptr inbounds [7 x i32], [7 x i32]* @testArraySub, i64 0, i64 %2, !dbg !166
-  %16 = load i32, i32* %15, align 4, !dbg !166, !tbaa !36
-  %17 = tail call i32 @sub(i32 %4, i32 %6), !dbg !166
-  %18 = icmp eq i32 %16, %17, !dbg !166
-  br i1 %18, label %22, label %19, !dbg !166
+  %15 = getelementptr inbounds [7 x i32], [7 x i32]* @testArraySub, i64 0, i64 %2, !dbg !174
+  %16 = load i32, i32* %15, align 4, !dbg !174, !tbaa !36
+  %17 = tail call i32 @sub(i32 %4, i32 %6), !dbg !174
+  %18 = icmp eq i32 %16, %17, !dbg !174
+  br i1 %18, label %22, label %19, !dbg !174
 
 19:                                               ; preds = %14
-  %20 = tail call i32 @sub(i32 %4, i32 %6), !dbg !166
-  %21 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0), i32 %16, i32 %20), !dbg !166
-  br label %22, !dbg !166
+  %20 = tail call i32 @sub(i32 %4, i32 %6), !dbg !174
+  %21 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0), i32 %16, i32 %20), !dbg !174
+  br label %22, !dbg !174
 
 22:                                               ; preds = %14, %19
-  %23 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayMul, i64 0, i64 %2, !dbg !167
-  %24 = load i32, i32* %23, align 4, !dbg !167, !tbaa !36
-  %25 = tail call i32 @mul(i32 %4, i32 %6), !dbg !167
-  %26 = icmp eq i32 %24, %25, !dbg !167
-  br i1 %26, label %30, label %27, !dbg !167
+  %23 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayMul, i64 0, i64 %2, !dbg !175
+  %24 = load i32, i32* %23, align 4, !dbg !175, !tbaa !36
+  %25 = tail call i32 @mul(i32 %4, i32 %6), !dbg !175
+  %26 = icmp eq i32 %24, %25, !dbg !175
+  br i1 %26, label %30, label %27, !dbg !175
 
 27:                                               ; preds = %22
-  %28 = tail call i32 @mul(i32 %4, i32 %6), !dbg !167
-  %29 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i64 0, i64 0), i32 %24, i32 %28), !dbg !167
-  br label %30, !dbg !167
+  %28 = tail call i32 @mul(i32 %4, i32 %6), !dbg !175
+  %29 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.3, i64 0, i64 0), i32 %24, i32 %28), !dbg !175
+  br label %30, !dbg !175
 
 30:                                               ; preds = %22, %27
-  %31 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayXor, i64 0, i64 %2, !dbg !168
-  %32 = load i32, i32* %31, align 4, !dbg !168, !tbaa !36
-  %33 = tail call i32 @xor1(i32 %4, i32 %6), !dbg !168
-  %34 = icmp eq i32 %32, %33, !dbg !168
-  br i1 %34, label %38, label %35, !dbg !168
+  %31 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayXor, i64 0, i64 %2, !dbg !176
+  %32 = load i32, i32* %31, align 4, !dbg !176, !tbaa !36
+  %33 = tail call i32 @xor1(i32 %4, i32 %6), !dbg !176
+  %34 = icmp eq i32 %32, %33, !dbg !176
+  br i1 %34, label %38, label %35, !dbg !176
 
 35:                                               ; preds = %30
-  %36 = tail call i32 @xor1(i32 %4, i32 %6), !dbg !168
-  %37 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.4, i64 0, i64 0), i32 %32, i32 %36), !dbg !168
-  br label %38, !dbg !168
+  %36 = tail call i32 @xor1(i32 %4, i32 %6), !dbg !176
+  %37 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.4, i64 0, i64 0), i32 %32, i32 %36), !dbg !176
+  br label %38, !dbg !176
 
 38:                                               ; preds = %30, %35
-  %39 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayOr, i64 0, i64 %2, !dbg !169
-  %40 = load i32, i32* %39, align 4, !dbg !169, !tbaa !36
-  %41 = tail call i32 @or1(i32 %4, i32 %6), !dbg !169
-  %42 = icmp eq i32 %40, %41, !dbg !169
-  br i1 %42, label %46, label %43, !dbg !169
+  %39 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayOr, i64 0, i64 %2, !dbg !177
+  %40 = load i32, i32* %39, align 4, !dbg !177, !tbaa !36
+  %41 = tail call i32 @or1(i32 %4, i32 %6), !dbg !177
+  %42 = icmp eq i32 %40, %41, !dbg !177
+  br i1 %42, label %46, label %43, !dbg !177
 
 43:                                               ; preds = %38
-  %44 = tail call i32 @or1(i32 %4, i32 %6), !dbg !169
-  %45 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.5, i64 0, i64 0), i32 %40, i32 %44), !dbg !169
-  br label %46, !dbg !169
+  %44 = tail call i32 @or1(i32 %4, i32 %6), !dbg !177
+  %45 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.5, i64 0, i64 0), i32 %40, i32 %44), !dbg !177
+  br label %46, !dbg !177
 
 46:                                               ; preds = %38, %43
-  %47 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayAnd, i64 0, i64 %2, !dbg !170
-  %48 = load i32, i32* %47, align 4, !dbg !170, !tbaa !36
-  %49 = tail call i32 @and1(i32 %4, i32 %6), !dbg !170
-  %50 = icmp eq i32 %48, %49, !dbg !170
-  br i1 %50, label %54, label %51, !dbg !170
+  %47 = getelementptr inbounds [7 x i32], [7 x i32]* @testArrayAnd, i64 0, i64 %2, !dbg !178
+  %48 = load i32, i32* %47, align 4, !dbg !178, !tbaa !36
+  %49 = tail call i32 @and1(i32 %4, i32 %6), !dbg !178
+  %50 = icmp eq i32 %48, %49, !dbg !178
+  br i1 %50, label %54, label %51, !dbg !178
 
 51:                                               ; preds = %46
-  %52 = tail call i32 @and1(i32 %4, i32 %6), !dbg !170
-  %53 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.6, i64 0, i64 0), i32 %48, i32 %52), !dbg !170
-  br label %54, !dbg !170
+  %52 = tail call i32 @and1(i32 %4, i32 %6), !dbg !178
+  %53 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.6, i64 0, i64 0), i32 %48, i32 %52), !dbg !178
+  br label %54, !dbg !178
 
 54:                                               ; preds = %46, %51
-  %55 = add nuw nsw i64 %2, 1, !dbg !171
-  call void @llvm.dbg.value(metadata i64 %55, metadata !153, metadata !DIExpression()), !dbg !160
-  %56 = icmp eq i64 %55, 7, !dbg !172
-  br i1 %56, label %57, label %1, !dbg !161, !llvm.loop !173
+  %55 = add nuw nsw i64 %2, 1, !dbg !179
+  call void @llvm.dbg.value(metadata i64 %55, metadata !161, metadata !DIExpression()), !dbg !168
+  %56 = icmp eq i64 %55, 7, !dbg !180
+  br i1 %56, label %57, label %1, !dbg !169, !llvm.loop !181
 
 57:                                               ; preds = %54
-  %58 = tail call i32 @password(i32 -2), !dbg !175
-  %59 = icmp eq i32 %58, -1, !dbg !175
-  br i1 %59, label %63, label %60, !dbg !175
+  %58 = tail call i32 @password(i32 -2), !dbg !183
+  %59 = icmp eq i32 %58, -1, !dbg !183
+  br i1 %59, label %63, label %60, !dbg !183
 
 60:                                               ; preds = %57
-  %61 = tail call i32 @password(i32 -2), !dbg !175
-  %62 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.7, i64 0, i64 0), i32 %61, i32 -1), !dbg !175
-  br label %63, !dbg !175
+  %61 = tail call i32 @password(i32 -2), !dbg !183
+  %62 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.7, i64 0, i64 0), i32 %61, i32 -1), !dbg !183
+  br label %63, !dbg !183
 
 63:                                               ; preds = %57, %60
-  %64 = tail call i32 @password(i32 -1), !dbg !176
-  %65 = icmp eq i32 %64, -1, !dbg !176
-  br i1 %65, label %69, label %66, !dbg !176
+  %64 = tail call i32 @password(i32 -1), !dbg !184
+  %65 = icmp eq i32 %64, -1, !dbg !184
+  br i1 %65, label %69, label %66, !dbg !184
 
 66:                                               ; preds = %63
-  %67 = tail call i32 @password(i32 -1), !dbg !176
-  %68 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.8, i64 0, i64 0), i32 %67, i32 -1), !dbg !176
-  br label %69, !dbg !176
+  %67 = tail call i32 @password(i32 -1), !dbg !184
+  %68 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.8, i64 0, i64 0), i32 %67, i32 -1), !dbg !184
+  br label %69, !dbg !184
 
 69:                                               ; preds = %63, %66
-  %70 = tail call i32 @password(i32 0), !dbg !177
-  %71 = icmp eq i32 %70, 1337, !dbg !177
-  br i1 %71, label %75, label %72, !dbg !177
+  %70 = tail call i32 @password(i32 0), !dbg !185
+  %71 = icmp eq i32 %70, 1337, !dbg !185
+  br i1 %71, label %75, label %72, !dbg !185
 
 72:                                               ; preds = %69
-  %73 = tail call i32 @password(i32 0), !dbg !177
-  %74 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.9, i64 0, i64 0), i32 %73, i32 1337), !dbg !177
-  br label %75, !dbg !177
+  %73 = tail call i32 @password(i32 0), !dbg !185
+  %74 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.9, i64 0, i64 0), i32 %73, i32 1337), !dbg !185
+  br label %75, !dbg !185
 
 75:                                               ; preds = %69, %72
-  %76 = tail call i32 @password(i32 1), !dbg !178
-  %77 = icmp eq i32 %76, -1, !dbg !178
-  br i1 %77, label %81, label %78, !dbg !178
+  %76 = tail call i32 @password(i32 1), !dbg !186
+  %77 = icmp eq i32 %76, -1, !dbg !186
+  br i1 %77, label %81, label %78, !dbg !186
 
 78:                                               ; preds = %75
-  %79 = tail call i32 @password(i32 1), !dbg !178
-  %80 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.10, i64 0, i64 0), i32 %79, i32 -1), !dbg !178
-  br label %81, !dbg !178
+  %79 = tail call i32 @password(i32 1), !dbg !186
+  %80 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.10, i64 0, i64 0), i32 %79, i32 -1), !dbg !186
+  br label %81, !dbg !186
 
 81:                                               ; preds = %75, %78
-  %82 = tail call i32 @password(i32 2), !dbg !179
-  %83 = icmp eq i32 %82, 1337, !dbg !179
-  br i1 %83, label %87, label %84, !dbg !179
+  %82 = tail call i32 @password(i32 2), !dbg !187
+  %83 = icmp eq i32 %82, 1337, !dbg !187
+  br i1 %83, label %87, label %84, !dbg !187
 
 84:                                               ; preds = %81
-  %85 = tail call i32 @password(i32 2), !dbg !179
-  %86 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.11, i64 0, i64 0), i32 %85, i32 1337), !dbg !179
-  br label %87, !dbg !179
+  %85 = tail call i32 @password(i32 2), !dbg !187
+  %86 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.11, i64 0, i64 0), i32 %85, i32 1337), !dbg !187
+  br label %87, !dbg !187
 
 87:                                               ; preds = %81, %84
-  %88 = tail call i32 @password(i32 3), !dbg !180
-  %89 = icmp eq i32 %88, -1, !dbg !180
-  br i1 %89, label %93, label %90, !dbg !180
+  %88 = tail call i32 @password(i32 3), !dbg !188
+  %89 = icmp eq i32 %88, -1, !dbg !188
+  br i1 %89, label %93, label %90, !dbg !188
 
 90:                                               ; preds = %87
-  %91 = tail call i32 @password(i32 3), !dbg !180
-  %92 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.12, i64 0, i64 0), i32 %91, i32 -1), !dbg !180
-  br label %93, !dbg !180
+  %91 = tail call i32 @password(i32 3), !dbg !188
+  %92 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.12, i64 0, i64 0), i32 %91, i32 -1), !dbg !188
+  br label %93, !dbg !188
 
 93:                                               ; preds = %87, %90
-  %94 = tail call i32 @password(i32 4), !dbg !181
-  %95 = icmp eq i32 %94, 1337, !dbg !181
-  br i1 %95, label %99, label %96, !dbg !181
+  %94 = tail call i32 @password(i32 4), !dbg !189
+  %95 = icmp eq i32 %94, 1337, !dbg !189
+  br i1 %95, label %99, label %96, !dbg !189
 
 96:                                               ; preds = %93
-  %97 = tail call i32 @password(i32 4), !dbg !181
-  %98 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.13, i64 0, i64 0), i32 %97, i32 1337), !dbg !181
-  br label %99, !dbg !181
+  %97 = tail call i32 @password(i32 4), !dbg !189
+  %98 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.13, i64 0, i64 0), i32 %97, i32 1337), !dbg !189
+  br label %99, !dbg !189
 
 99:                                               ; preds = %93, %96
-  %100 = tail call i32 @password(i32 5000), !dbg !182
-  %101 = icmp eq i32 %100, -1, !dbg !182
-  br i1 %101, label %105, label %102, !dbg !182
+  %100 = tail call i32 @password(i32 5000), !dbg !190
+  %101 = icmp eq i32 %100, -1, !dbg !190
+  br i1 %101, label %105, label %102, !dbg !190
 
 102:                                              ; preds = %99
-  %103 = tail call i32 @password(i32 5000), !dbg !182
-  %104 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.14, i64 0, i64 0), i32 %103, i32 -1), !dbg !182
-  br label %105, !dbg !182
+  %103 = tail call i32 @password(i32 5000), !dbg !190
+  %104 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.14, i64 0, i64 0), i32 %103, i32 -1), !dbg !190
+  br label %105, !dbg !190
 
 105:                                              ; preds = %99, %102
-  %106 = tail call zeroext i8 @password8(i8 zeroext 0), !dbg !183
-  %107 = icmp eq i8 %106, 111, !dbg !183
-  br i1 %107, label %112, label %108, !dbg !183
+  %106 = tail call zeroext i8 @password8(i8 zeroext 0), !dbg !191
+  %107 = icmp eq i8 %106, 111, !dbg !191
+  br i1 %107, label %112, label %108, !dbg !191
 
 108:                                              ; preds = %105
-  %109 = tail call zeroext i8 @password8(i8 zeroext 0), !dbg !183
-  %110 = zext i8 %109 to i32, !dbg !183
-  %111 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.15, i64 0, i64 0), i32 %110, i32 111), !dbg !183
-  br label %112, !dbg !183
+  %109 = tail call zeroext i8 @password8(i8 zeroext 0), !dbg !191
+  %110 = zext i8 %109 to i32, !dbg !191
+  %111 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.15, i64 0, i64 0), i32 %110, i32 111), !dbg !191
+  br label %112, !dbg !191
 
 112:                                              ; preds = %105, %108
-  %113 = tail call zeroext i8 @password8(i8 zeroext 1), !dbg !184
-  %114 = icmp eq i8 %113, 0, !dbg !184
-  br i1 %114, label %119, label %115, !dbg !184
+  %113 = tail call zeroext i8 @password8(i8 zeroext 1), !dbg !192
+  %114 = icmp eq i8 %113, 0, !dbg !192
+  br i1 %114, label %119, label %115, !dbg !192
 
 115:                                              ; preds = %112
-  %116 = tail call zeroext i8 @password8(i8 zeroext 1), !dbg !184
-  %117 = zext i8 %116 to i32, !dbg !184
-  %118 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.16, i64 0, i64 0), i32 %117, i32 0), !dbg !184
-  br label %119, !dbg !184
+  %116 = tail call zeroext i8 @password8(i8 zeroext 1), !dbg !192
+  %117 = zext i8 %116 to i32, !dbg !192
+  %118 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.16, i64 0, i64 0), i32 %117, i32 0), !dbg !192
+  br label %119, !dbg !192
 
 119:                                              ; preds = %112, %115
-  %120 = tail call zeroext i8 @password8(i8 zeroext 2), !dbg !185
-  %121 = icmp eq i8 %120, 111, !dbg !185
-  br i1 %121, label %126, label %122, !dbg !185
+  %120 = tail call zeroext i8 @password8(i8 zeroext 2), !dbg !193
+  %121 = icmp eq i8 %120, 111, !dbg !193
+  br i1 %121, label %126, label %122, !dbg !193
 
 122:                                              ; preds = %119
-  %123 = tail call zeroext i8 @password8(i8 zeroext 2), !dbg !185
-  %124 = zext i8 %123 to i32, !dbg !185
-  %125 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.17, i64 0, i64 0), i32 %124, i32 111), !dbg !185
-  br label %126, !dbg !185
+  %123 = tail call zeroext i8 @password8(i8 zeroext 2), !dbg !193
+  %124 = zext i8 %123 to i32, !dbg !193
+  %125 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.17, i64 0, i64 0), i32 %124, i32 111), !dbg !193
+  br label %126, !dbg !193
 
 126:                                              ; preds = %119, %122
-  %127 = tail call zeroext i8 @password8(i8 zeroext 3), !dbg !186
-  %128 = icmp eq i8 %127, 0, !dbg !186
-  br i1 %128, label %133, label %129, !dbg !186
+  %127 = tail call zeroext i8 @password8(i8 zeroext 3), !dbg !194
+  %128 = icmp eq i8 %127, 0, !dbg !194
+  br i1 %128, label %133, label %129, !dbg !194
 
 129:                                              ; preds = %126
-  %130 = tail call zeroext i8 @password8(i8 zeroext 3), !dbg !186
-  %131 = zext i8 %130 to i32, !dbg !186
-  %132 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.18, i64 0, i64 0), i32 %131, i32 0), !dbg !186
-  br label %133, !dbg !186
+  %130 = tail call zeroext i8 @password8(i8 zeroext 3), !dbg !194
+  %131 = zext i8 %130 to i32, !dbg !194
+  %132 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.18, i64 0, i64 0), i32 %131, i32 0), !dbg !194
+  br label %133, !dbg !194
 
 133:                                              ; preds = %126, %129
-  %134 = tail call zeroext i8 @password8(i8 zeroext 4), !dbg !187
-  %135 = icmp eq i8 %134, 111, !dbg !187
-  br i1 %135, label %140, label %136, !dbg !187
+  %134 = tail call zeroext i8 @password8(i8 zeroext 4), !dbg !195
+  %135 = icmp eq i8 %134, 111, !dbg !195
+  br i1 %135, label %140, label %136, !dbg !195
 
 136:                                              ; preds = %133
-  %137 = tail call zeroext i8 @password8(i8 zeroext 4), !dbg !187
-  %138 = zext i8 %137 to i32, !dbg !187
-  %139 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.19, i64 0, i64 0), i32 %138, i32 111), !dbg !187
-  br label %140, !dbg !187
+  %137 = tail call zeroext i8 @password8(i8 zeroext 4), !dbg !195
+  %138 = zext i8 %137 to i32, !dbg !195
+  %139 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.19, i64 0, i64 0), i32 %138, i32 111), !dbg !195
+  br label %140, !dbg !195
 
 140:                                              ; preds = %133, %136
-  %141 = tail call i32 @return5000(), !dbg !188
-  %142 = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([16 x i8], [16 x i8]* @str, i64 0, i64 0)), !dbg !189
-  ret i32 0, !dbg !190
+  %141 = tail call i32 @return95(i32 123), !dbg !196
+  %142 = icmp eq i32 %141, 95, !dbg !196
+  br i1 %142, label %146, label %143, !dbg !196
+
+143:                                              ; preds = %140
+  %144 = tail call i32 @return95(i32 123), !dbg !196
+  %145 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.20, i64 0, i64 0), i32 %144, i32 95), !dbg !196
+  br label %146, !dbg !196
+
+146:                                              ; preds = %140, %143
+  %147 = tail call i32 @return5000(), !dbg !197
+  %148 = tail call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([16 x i8], [16 x i8]* @str, i64 0, i64 0)), !dbg !198
+  ret i32 0, !dbg !199
 }
 
 ; Function Attrs: nofree nounwind
@@ -447,28 +469,28 @@ attributes #4 = { nofree nounwind }
 !llvm.ident = !{!29}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
-!1 = distinct !DIGlobalVariable(name: "testArray", scope: !2, file: !3, line: 53, type: !23, isLocal: true, isDefinition: true)
+!1 = distinct !DIGlobalVariable(name: "testArray", scope: !2, file: !3, line: 57, type: !23, isLocal: true, isDefinition: true)
 !2 = distinct !DICompileUnit(language: DW_LANG_C89, file: !3, producer: "Debian clang version 11.1.0-++20210428103820+1fdec59bffc1-1~exp1~20210428204437.162", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "test/test.c", directory: "/home/christopher/prog/cpp/obfus")
 !4 = !{}
 !5 = !{!0, !6, !13, !15, !17, !19, !21}
 !6 = !DIGlobalVariableExpression(var: !7, expr: !DIExpression())
-!7 = distinct !DIGlobalVariable(name: "testArrayAdd", scope: !2, file: !3, line: 54, type: !8, isLocal: true, isDefinition: true)
+!7 = distinct !DIGlobalVariable(name: "testArrayAdd", scope: !2, file: !3, line: 58, type: !8, isLocal: true, isDefinition: true)
 !8 = !DICompositeType(tag: DW_TAG_array_type, baseType: !9, size: 224, elements: !11)
 !9 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !10)
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !11 = !{!12}
 !12 = !DISubrange(count: 7)
 !13 = !DIGlobalVariableExpression(var: !14, expr: !DIExpression())
-!14 = distinct !DIGlobalVariable(name: "testArraySub", scope: !2, file: !3, line: 55, type: !8, isLocal: true, isDefinition: true)
+!14 = distinct !DIGlobalVariable(name: "testArraySub", scope: !2, file: !3, line: 59, type: !8, isLocal: true, isDefinition: true)
 !15 = !DIGlobalVariableExpression(var: !16, expr: !DIExpression())
-!16 = distinct !DIGlobalVariable(name: "testArrayMul", scope: !2, file: !3, line: 56, type: !8, isLocal: true, isDefinition: true)
+!16 = distinct !DIGlobalVariable(name: "testArrayMul", scope: !2, file: !3, line: 60, type: !8, isLocal: true, isDefinition: true)
 !17 = !DIGlobalVariableExpression(var: !18, expr: !DIExpression())
-!18 = distinct !DIGlobalVariable(name: "testArrayXor", scope: !2, file: !3, line: 57, type: !8, isLocal: true, isDefinition: true)
+!18 = distinct !DIGlobalVariable(name: "testArrayXor", scope: !2, file: !3, line: 61, type: !8, isLocal: true, isDefinition: true)
 !19 = !DIGlobalVariableExpression(var: !20, expr: !DIExpression())
-!20 = distinct !DIGlobalVariable(name: "testArrayOr", scope: !2, file: !3, line: 58, type: !8, isLocal: true, isDefinition: true)
+!20 = distinct !DIGlobalVariable(name: "testArrayOr", scope: !2, file: !3, line: 62, type: !8, isLocal: true, isDefinition: true)
 !21 = !DIGlobalVariableExpression(var: !22, expr: !DIExpression())
-!22 = distinct !DIGlobalVariable(name: "testArrayAnd", scope: !2, file: !3, line: 59, type: !8, isLocal: true, isDefinition: true)
+!22 = distinct !DIGlobalVariable(name: "testArrayAnd", scope: !2, file: !3, line: 63, type: !8, isLocal: true, isDefinition: true)
 !23 = !DICompositeType(tag: DW_TAG_array_type, baseType: !9, size: 448, elements: !24)
 !24 = !{!12, !25}
 !25 = !DISubrange(count: 2)
@@ -597,43 +619,52 @@ attributes #4 = { nofree nounwind }
 !148 = !DISubroutineType(types: !149)
 !149 = !{!10}
 !150 = !DILocation(line: 49, column: 5, scope: !147)
-!151 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 63, type: !148, scopeLine: 63, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !152)
-!152 = !{!153, !155, !159}
-!153 = !DILocalVariable(name: "i", scope: !151, file: !3, line: 64, type: !154)
-!154 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
-!155 = !DILocalVariable(name: "x", scope: !156, file: !3, line: 66, type: !9)
-!156 = distinct !DILexicalBlock(scope: !157, file: !3, line: 65, column: 68)
-!157 = distinct !DILexicalBlock(scope: !158, file: !3, line: 65, column: 5)
-!158 = distinct !DILexicalBlock(scope: !151, file: !3, line: 65, column: 5)
-!159 = !DILocalVariable(name: "y", scope: !156, file: !3, line: 67, type: !9)
-!160 = !DILocation(line: 0, scope: !151)
-!161 = !DILocation(line: 65, column: 5, scope: !158)
-!162 = !DILocation(line: 66, column: 23, scope: !156)
-!163 = !DILocation(line: 0, scope: !156)
-!164 = !DILocation(line: 67, column: 23, scope: !156)
-!165 = !DILocation(line: 68, column: 9, scope: !156)
-!166 = !DILocation(line: 69, column: 9, scope: !156)
-!167 = !DILocation(line: 70, column: 9, scope: !156)
-!168 = !DILocation(line: 71, column: 9, scope: !156)
-!169 = !DILocation(line: 72, column: 9, scope: !156)
-!170 = !DILocation(line: 73, column: 9, scope: !156)
-!171 = !DILocation(line: 65, column: 64, scope: !157)
-!172 = !DILocation(line: 65, column: 19, scope: !157)
-!173 = distinct !{!173, !161, !174}
-!174 = !DILocation(line: 74, column: 5, scope: !158)
-!175 = !DILocation(line: 75, column: 5, scope: !151)
-!176 = !DILocation(line: 76, column: 5, scope: !151)
-!177 = !DILocation(line: 77, column: 5, scope: !151)
-!178 = !DILocation(line: 78, column: 5, scope: !151)
-!179 = !DILocation(line: 79, column: 5, scope: !151)
-!180 = !DILocation(line: 80, column: 5, scope: !151)
-!181 = !DILocation(line: 81, column: 5, scope: !151)
-!182 = !DILocation(line: 82, column: 5, scope: !151)
-!183 = !DILocation(line: 83, column: 5, scope: !151)
-!184 = !DILocation(line: 84, column: 5, scope: !151)
-!185 = !DILocation(line: 85, column: 5, scope: !151)
-!186 = !DILocation(line: 86, column: 5, scope: !151)
-!187 = !DILocation(line: 87, column: 5, scope: !151)
-!188 = !DILocation(line: 89, column: 5, scope: !151)
-!189 = !DILocation(line: 91, column: 5, scope: !151)
-!190 = !DILocation(line: 92, column: 5, scope: !151)
+!151 = distinct !DISubprogram(name: "return95", scope: !3, file: !3, line: 52, type: !97, scopeLine: 52, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !152)
+!152 = !{!153}
+!153 = !DILocalVariable(name: "input", arg: 1, scope: !151, file: !3, line: 52, type: !9)
+!154 = !DILocation(line: 52, column: 49, scope: !151)
+!155 = !DILocation(line: 53, column: 12, scope: !151)
+!156 = !DILocation(line: 53, column: 18, scope: !151)
+!157 = !DILocation(line: 53, column: 23, scope: !151)
+!158 = !DILocation(line: 53, column: 5, scope: !151)
+!159 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 67, type: !148, scopeLine: 67, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !160)
+!160 = !{!161, !163, !167}
+!161 = !DILocalVariable(name: "i", scope: !159, file: !3, line: 68, type: !162)
+!162 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
+!163 = !DILocalVariable(name: "x", scope: !164, file: !3, line: 70, type: !9)
+!164 = distinct !DILexicalBlock(scope: !165, file: !3, line: 69, column: 68)
+!165 = distinct !DILexicalBlock(scope: !166, file: !3, line: 69, column: 5)
+!166 = distinct !DILexicalBlock(scope: !159, file: !3, line: 69, column: 5)
+!167 = !DILocalVariable(name: "y", scope: !164, file: !3, line: 71, type: !9)
+!168 = !DILocation(line: 0, scope: !159)
+!169 = !DILocation(line: 69, column: 5, scope: !166)
+!170 = !DILocation(line: 70, column: 23, scope: !164)
+!171 = !DILocation(line: 0, scope: !164)
+!172 = !DILocation(line: 71, column: 23, scope: !164)
+!173 = !DILocation(line: 72, column: 9, scope: !164)
+!174 = !DILocation(line: 73, column: 9, scope: !164)
+!175 = !DILocation(line: 74, column: 9, scope: !164)
+!176 = !DILocation(line: 75, column: 9, scope: !164)
+!177 = !DILocation(line: 76, column: 9, scope: !164)
+!178 = !DILocation(line: 77, column: 9, scope: !164)
+!179 = !DILocation(line: 69, column: 64, scope: !165)
+!180 = !DILocation(line: 69, column: 19, scope: !165)
+!181 = distinct !{!181, !169, !182}
+!182 = !DILocation(line: 78, column: 5, scope: !166)
+!183 = !DILocation(line: 79, column: 5, scope: !159)
+!184 = !DILocation(line: 80, column: 5, scope: !159)
+!185 = !DILocation(line: 81, column: 5, scope: !159)
+!186 = !DILocation(line: 82, column: 5, scope: !159)
+!187 = !DILocation(line: 83, column: 5, scope: !159)
+!188 = !DILocation(line: 84, column: 5, scope: !159)
+!189 = !DILocation(line: 85, column: 5, scope: !159)
+!190 = !DILocation(line: 86, column: 5, scope: !159)
+!191 = !DILocation(line: 87, column: 5, scope: !159)
+!192 = !DILocation(line: 88, column: 5, scope: !159)
+!193 = !DILocation(line: 89, column: 5, scope: !159)
+!194 = !DILocation(line: 90, column: 5, scope: !159)
+!195 = !DILocation(line: 91, column: 5, scope: !159)
+!196 = !DILocation(line: 93, column: 5, scope: !159)
+!197 = !DILocation(line: 94, column: 5, scope: !159)
+!198 = !DILocation(line: 96, column: 5, scope: !159)
+!199 = !DILocation(line: 97, column: 5, scope: !159)

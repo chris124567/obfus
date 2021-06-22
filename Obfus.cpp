@@ -37,20 +37,23 @@ static bool TransformIntegerConstants(BasicBlock &BB) {
         if (!x_value && !y_value) {
             continue;
         }
-        const auto value_replace_index = (x_value) ? 0 : 1;
+        const int value_replace_index = (x_value) ? 0 : 1;
         const auto value_replace = (value_replace_index == 0) ? x_value : y_value;
-        // we only support 0 for now
-        if (value_replace->getSExtValue() != 0) {
-            continue;
-        }
 
         const auto same = (value_replace_index == 0) ? y : x;
         const auto int_type = value_replace->getType();
-        std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255), ConstantInt::get(int_type, std::rand() % 255)};
+        // std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255), ConstantInt::get(int_type, std::rand() % 255)};
         // std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255)};
 
         llvm::IRBuilder<> builder(icmp_op);
-        icmp_op->setOperand(value_replace_index, GenerateRandomMBAIdentity(builder, int_type, vars));
+        std::vector<Value *> vars{same, ConstantInt::get(int_type, std::rand() % 255), ConstantInt::get(int_type, std::rand() % 255)};
+        const auto zero_expr = GenerateRandomMBAIdentity(builder, int_type, vars);
+        if (value_replace->getSExtValue() == 0) {
+            icmp_op->setOperand(value_replace_index, zero_expr);
+        } else {
+            // convoluted add - x ^ 0 = x
+            icmp_op->setOperand(value_replace_index, builder.CreateXor(zero_expr, value_replace->getSExtValue()));
+        }
         changed = true;
     }
 
@@ -70,10 +73,10 @@ static bool TransformBinaryOperatorBasicBlock(BasicBlock &BB) {
         IRBuilder<> builder(bin_op);
 
         // useful variables in building the instruction for substitution
-        // const auto val_negative_1 = ConstantInt::get(bin_op->getType(), -1);
         const auto val_negative_2 = ConstantInt::get(bin_op->getType(), -2);
         const auto val_1 = ConstantInt::get(bin_op->getType(), 1);
         const auto val_2 = ConstantInt::get(bin_op->getType(), 2);
+        const auto val_3 = ConstantInt::get(bin_op->getType(), 3);
         // const auto rand_1 = ConstantInt::get(bin_op->getType(), rand() % 255);
         // const auto rand_2 = ConstantInt::get(bin_op->getType(), rand() % 255);
         const auto x = bin_op->getOperand(0);
@@ -97,6 +100,9 @@ To test proofs, run this first (python):
         errs() << "Opcode: Instruction::" << I->getOpcodeName() << "\n";
 #endif
 
+        std::vector<Value *> vars{x, y, ConstantInt::get(bin_op->getType(), std::rand() % 255)};
+        const auto identity = GenerateRandomMBAIdentity(builder, bin_op->getType(), vars);
+
         switch (I->getOpcode()) {
             case Instruction::Add:
                 /*
@@ -106,18 +112,30 @@ To test proofs, run this first (python):
             proved
             >>> z3.prove((x + y) == (2*(x | y) - (~x & y) - (x & ~y)))
             proved
+            >>> z3.prove((x + y) == ((x | y) + y - (~x & y)))
+            proved
+            >>> z3.prove((x + y) == (x ^ y) + 2*y - 2*(~x & y))
+            proved
                 */
-                switch (rand % 3) {
-                    case 0:
-                        new_value = builder.CreateAdd(builder.CreateXor(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
-                        break;
-                    case 1:
-                        new_value = builder.CreateSub(builder.CreateXor(x, y), builder.CreateAdd(builder.CreateOr(builder.CreateSub(builder.CreateMul(val_negative_2, x), val_1), builder.CreateSub(builder.CreateMul(val_negative_2, y), val_1)), val_1));
-                        break;
-                    case 2:
-                        new_value = builder.CreateSub(builder.CreateMul(val_2, builder.CreateOr(x, y)), builder.CreateAdd(builder.CreateAnd(builder.CreateNot(x), y), builder.CreateAnd(x, builder.CreateNot(y))));
-                        break;
-                }
+                // switch (rand % 5) {
+                //     case 0:
+                //         new_value = builder.CreateAdd(builder.CreateXor(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
+                //         break;
+                //     case 1:
+                //         new_value = builder.CreateSub(builder.CreateXor(x, y), builder.CreateAdd(builder.CreateOr(builder.CreateSub(builder.CreateMul(val_negative_2, x), val_1), builder.CreateSub(builder.CreateMul(val_negative_2, y), val_1)), val_1));
+                //         break;
+                //     case 2:
+                //         new_value = builder.CreateSub(builder.CreateMul(val_2, builder.CreateOr(x, y)), builder.CreateAdd(builder.CreateAnd(builder.CreateNot(x), y), builder.CreateAnd(x, builder.CreateNot(y))));
+                //         break;
+                //     case 3:
+                //         new_value = builder.CreateSub(builder.CreateAdd(builder.CreateOr(x, y), y), builder.CreateAnd(builder.CreateNot(x), y));
+                //         break;
+                //     case 4:
+                //         new_value = builder.CreateSub(builder.CreateAdd(builder.CreateXor(x, y), builder.CreateMul(val_2, y)), builder.CreateMul(val_2, builder.CreateAnd(builder.CreateNot(x), y)));
+                //         break;
+                // }
+                new_value = builder.CreateAdd(builder.CreateAdd(x, identity), y);
+
                 break;
             case Instruction::Sub:
                 /*
@@ -127,42 +145,56 @@ To test proofs, run this first (python):
             proved
             >>> z3.prove((x - y) == ~(~x + y))
             proved
+            >>> z3.prove((x - y) == (3*(x & ~y) + ~x) - ((x ^ y) + ~(x & y)))
+            proved
                 */
-                switch (rand % 3) {
-                    case 0:
-                        // ((x ^ (~y+1)) - ((-2*x - 1) | (2*y - 1)) - 1)
-                        new_value = builder.CreateSub(builder.CreateXor(x, builder.CreateAdd(builder.CreateNot(y), val_1)), builder.CreateAdd(builder.CreateOr(builder.CreateSub(builder.CreateMul(val_negative_2, x), val_1), builder.CreateSub(builder.CreateMul(val_2, y), val_1)), val_1));
-                        break;
-                    case 1:
-                        // ((x & ~y) - (~x & y))
-                        new_value = builder.CreateSub(builder.CreateAnd(x, builder.CreateNot(y)), builder.CreateAnd(builder.CreateNot(x), y));
-                        break;
-                    case 2:
-                        // ~(~x + y)
-                        new_value = builder.CreateNot(builder.CreateAdd(builder.CreateNot(x), y));
-                        break;
-                }
+                // switch (rand % 4) {
+                //     case 0:
+                //         new_value = builder.CreateSub(builder.CreateXor(x, builder.CreateAdd(builder.CreateNot(y), val_1)), builder.CreateAdd(builder.CreateOr(builder.CreateSub(builder.CreateMul(val_negative_2, x), val_1), builder.CreateSub(builder.CreateMul(val_2, y), val_1)), val_1));
+                //         break;
+                //     case 1:
+                //         new_value = builder.CreateSub(builder.CreateAnd(x, builder.CreateNot(y)), builder.CreateAnd(builder.CreateNot(x), y));
+                //         break;
+                //     case 2:
+                //         new_value = builder.CreateNot(builder.CreateAdd(builder.CreateNot(x), y));
+                //         break;
+                //     case 3:
+                //         new_value = builder.CreateSub(builder.CreateAdd(builder.CreateMul(val_3, builder.CreateAnd(x, builder.CreateNot(y))), builder.CreateNot(x)), builder.CreateAdd(builder.CreateXor(x, y), builder.CreateNot(builder.CreateAnd(x, y))));
+                //         break;
+                // }
+
+                new_value = builder.CreateSub(builder.CreateAdd(x, identity), y);
+
                 break;
             case Instruction::Xor:
                 /*
                 >>> z3.prove((x ^ y) == (x + y - 2*(x & y)))
                 proved
                 */
-                new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
+                // new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateMul(val_2, builder.CreateAnd(x, y)));
+
+                new_value = builder.CreateXor(builder.CreateAdd(x, identity), y);
+
                 break;
             case Instruction::Or:
                 /*
                 >>> z3.prove((x | y) == (x + y - (x & y)))
                 proved
                 */
-                new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateAnd(x, y));
+                // new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateAnd(x, y));
+
+                new_value = builder.CreateOr(builder.CreateAdd(x, identity), y);
+
                 break;
             case Instruction::And:
                 /*
                 >>> z3.prove((x & y) == (x + y - (x|y)))
                 proved
                 */
-                new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateOr(x, y));
+                // new_value = builder.CreateSub(builder.CreateAdd(x, y), builder.CreateOr(x, y));
+
+                new_value = builder.CreateAnd(builder.CreateAdd(x, identity), y);
+
                 break;
         }
         // if we have something to replace the instruction with, replace it
@@ -184,11 +216,11 @@ PreservedAnalyses Obfus::run(Function &F, FunctionAnalysisManager &) {
 
     for (auto &BB : F) {
         // ORIGINAL ORDER:
-        // changed |= TransformBinaryOperatorBasicBlock(BB);
-        // changed |= TransformIntegerConstants(BB);
-        // NEW ORDER:
-        changed |= TransformIntegerConstants(BB);
         changed |= TransformBinaryOperatorBasicBlock(BB);
+        changed |= TransformIntegerConstants(BB);
+        // NEW ORDER:
+        // changed |= TransformIntegerConstants(BB);
+        // changed |= TransformBinaryOperatorBasicBlock(BB);
     }
 
 #ifdef DEBUG

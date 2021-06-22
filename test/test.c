@@ -49,6 +49,10 @@ int __attribute__((optnone)) return5000(void) {
     return 5000;
 }
 
+int __attribute__((optnone)) return95(const int input) {
+    return input & 74 | 95;
+}
+
 /* TODO: codegen this */
 static const int testArray[7][2] = {{-5, -6}, {0, 0}, {1, -6}, {1, 1}, {1, 2}, {3, 4}, {2147483640, 7}};
 static const int testArrayAdd[7] = {-11, 0, -5, 2, 3, 7, 2147483647};
@@ -86,6 +90,7 @@ int main(void) {
     EXPECT_EQ("password8(3)", password8(3), 0);
     EXPECT_EQ("password8(4)", password8(4), 111);
 
+    EXPECT_EQ("return95(123)", return95(123), 95);
     EXPECT_EQ("return5000()", return5000(), 5000);
 
     printf("Finished tests!\n");
