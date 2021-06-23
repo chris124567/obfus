@@ -11,7 +11,8 @@ static const constexpr int kMaxVars = 4;
 // rows = 2**vars
 static const constexpr int kMaxRows = 1 << kMaxVars;
 
-static bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars], const int rows, const int columns) {
+// check if F * v = 0: used to check nullspace if calculation is correct
+static __attribute__((const)) constexpr bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars], const int rows, const int columns) {
     for (int row = 0; row < rows; row++) {
         int sum = 0;
         for (int column = 0; column < columns; column++) {
@@ -24,11 +25,16 @@ static bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[
     return true;
 }
 
+namespace obfus {
 // generate expressions that equal 0 regardless of the value of the variables
+// pointers in vars should not be null
 llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars) {
+    // this many columns
     const int vars_count = vars.size();
+    // 2**vars_count rows
     const int rows_count = 1 << vars_count;
-    const int nullspace_attempts = pow(4, vars_count);
+    // 2 choices - 1 or -1
+    const int nullspace_attempts = pow(2, vars_count);
 
     int F[kMaxRows][kMaxVars] = {{0}};
     int solutions[kMaxVars] = {0};
@@ -47,7 +53,7 @@ llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *t
             }
         }
 
-        // bruteforce nontrivial (mathematical meaning) nullspace calculation
+        // bruteforce nontrivial nullspace
         for (int i = 0; i < nullspace_attempts; i++) {
             for (int j = 0; j < vars_count; j++) {
                 solutions[j] = ((i >> (2 * j)) & 1) ? 1 : -1;
@@ -101,3 +107,4 @@ llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *t
     }
     return start;
 }
+}  // namespace obfus
