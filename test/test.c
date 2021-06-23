@@ -41,6 +41,14 @@ uint8_t __attribute__((optnone)) password8(const uint8_t input) {
     }
 }
 
+int16_t __attribute__((optnone)) password16(const int16_t input) {
+    if (input >= 0 && input < 5 && (input & 1) == 0) {
+        return 5000;
+    } else {
+        return -1;
+    }
+}
+
 int __attribute__((optnone)) return5000(void) {
     return 5000;
 }
@@ -79,6 +87,13 @@ int main(void) {
     EXPECT_EQ("password8(2)", password8(2), 111);
     EXPECT_EQ("password8(3)", password8(3), 0);
     EXPECT_EQ("password8(4)", password8(4), 111);
+    EXPECT_EQ("password16(-2)", password16(-2), -1);
+    EXPECT_EQ("password16(-1)", password16(-1), -1);
+    EXPECT_EQ("password16(0)", password16(0), 5000);
+    EXPECT_EQ("password16(1)", password16(1), -1);
+    EXPECT_EQ("password16(2)", password16(2), 5000);
+    EXPECT_EQ("password16(3)", password16(3), -1);
+    EXPECT_EQ("password16(4)", password16(4), 5000);
     EXPECT_EQ("return5000()", return5000(), 5000);
 
     printf("Finished tests!\n");

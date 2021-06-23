@@ -1,2 +1,2 @@
 ## Obfus
-LLVM obfuscation pass.  Currently only supports basic transformation of binary operations - more features coming soon.  Works natively with clang and LLVM's `opt` tool.  Refer to `test.sh` for information on using it with clang.
+LLVM obfuscation pass.  Works natively with clang and LLVM's `opt` tool.  Refer to `test.sh` for information on using it with clang.

@@ -11,11 +11,11 @@ static const constexpr int kMaxVars = 4;
 // rows = 2**vars
 static const constexpr int kMaxRows = 1 << kMaxVars;
 
-static bool FVEqualsZero(const int rows, const int columns, const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars]) {
-    for (int r = 0; r < rows; r++) {
+static bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars], const int rows, const int columns) {
+    for (int row = 0; row < rows; row++) {
         int sum = 0;
         for (int column = 0; column < columns; column++) {
-            sum += matrix[r][column] * vector[column];
+            sum += matrix[row][column] * vector[column];
         }
         if (sum != 0) {
             return false;
@@ -24,32 +24,35 @@ static bool FVEqualsZero(const int rows, const int columns, const int matrix[kMa
     return true;
 }
 
+// generate expressions that equal 0 regardless of the value of the variables
 llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars) {
-    const unsigned int vars_count = vars.size();
-    const unsigned int rows_count = 1 << vars_count;
-    const unsigned int nullspace_attempts = pow(4, vars_count);
+    const int vars_count = vars.size();
+    const int rows_count = 1 << vars_count;
+    const int nullspace_attempts = pow(4, vars_count);
 
     int F[kMaxRows][kMaxVars] = {{0}};
     int solutions[kMaxVars] = {0};
 
+    for (int i = 0; i < rows_count; i++) {
+        // truth table: we dont unnecessarily recalculate every loop below
+        F[i][0] = (i >> (vars_count - 1)) & 1;
+    }
+
     bool found_solution = false;
     while (!found_solution) {
-        for (size_t i = 0; i < rows_count; i++) {
-            // truth table
-            F[i][0] = (i >> (vars_count - 1)) & 1;
-            // random data
-            for (size_t j = 1; j < vars_count; j++) {
+        for (int i = 0; i < rows_count; i++) {
+            // random data:  j=1 ensures we dont overwrite truth table
+            for (int j = 1; j < vars_count; j++) {
                 F[i][j] = std::rand() % 2;
             }
         }
 
         // bruteforce nontrivial (mathematical meaning) nullspace calculation
-        const constexpr int kValidNullspaceValues[] = {-1, -1, 1, 1};
-        for (unsigned int i = 0; i < nullspace_attempts; i++) {
-            for (unsigned int j = 0; j < vars_count; j++) {
-                solutions[j] = kValidNullspaceValues[(i >> (2 * j)) & 3];
+        for (int i = 0; i < nullspace_attempts; i++) {
+            for (int j = 0; j < vars_count; j++) {
+                solutions[j] = ((i >> (2 * j)) & 1) ? 1 : -1;
             }
-            found_solution = FVEqualsZero(rows_count, vars_count, F, solutions);
+            found_solution = FVEqualsZero(F, solutions, rows_count, vars_count);
             if (found_solution) {
                 break;
             }
@@ -57,15 +60,17 @@ llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *t
     }
 
     llvm::Value *start = nullptr;
-    for (size_t i = 0; i < vars_count; i++) {
+    // columns
+    for (int i = 0; i < vars_count; i++) {
         llvm::Value *col_form = nullptr;
-        for (size_t j = 0; j < rows_count; j++) {
+        // rows
+        for (int j = 0; j < rows_count; j++) {
             if (F[j][i] == 1) {
                 llvm::Value *row_expr = nullptr;
 
                 // convert to SOP form
-                for (unsigned int k = 0; k < vars_count; k++) {
-                    const auto &cur = (((j >> (vars_count - k - 1)) & 1) == 0) ? builder.CreateNot(vars.at(k)) : vars.at(k);
+                for (int k = 0; k < vars_count; k++) {
+                    const auto cur = (((j >> (vars_count - k - 1)) & 1) == 0) ? builder.CreateNot(vars.at(k)) : vars.at(k);
                     // if we dont have anything for the row expression assign it
                     // to the current variable.  if we do have something AND it with
                     // the current variable
