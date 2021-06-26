@@ -8,8 +8,10 @@
 
 #include <cstdlib>
 
+#include "DeriveZeroMBA.hpp"
 #include "Transforms.hpp"
 
+namespace obfus {
 llvm::PreservedAnalyses Obfus::run(llvm::Function &F, llvm::FunctionAnalysisManager &) {
     bool changed = false;
     const auto &name = F.getName();
@@ -30,9 +32,11 @@ llvm::PreservedAnalyses Obfus::run(llvm::Function &F, llvm::FunctionAnalysisMana
         // ORIGINAL ORDER:
         // changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
         // changed |= obfus::TransformIntegerConstants(BB);
+        // changed |= obfus::TransformControlFlow(BB);
         // NEW ORDER:
-        changed |= obfus::TransformIntegerConstants(BB);
-        changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
+        // changed |= obfus::TransformIntegerConstants(BB);
+        // changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
+        changed |= obfus::TransformControlFlow(BB);
     }
 
 #ifdef DEBUG
@@ -44,16 +48,17 @@ llvm::PreservedAnalyses Obfus::run(llvm::Function &F, llvm::FunctionAnalysisMana
 #endif
 
     return changed ? llvm::PreservedAnalyses::none() : llvm::PreservedAnalyses::all();
-};
+}
+}  // namespace obfus
 
-// make our plugin load by default so it works with clang
 extern "C" LLVM_ATTRIBUTE_WEAK llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "Obfus Pass", LLVM_VERSION_STRING,
             [](llvm::PassBuilder &PB) {
-                // constexpr const int seed = 0;
+                // const constexpr int seed = 1;
                 const int seed = std::time(nullptr);
                 srand(seed);
+
 #ifdef DEBUG
                 llvm::errs() << "Random seed: " << seed << "\n";
 #endif
@@ -62,7 +67,7 @@ llvmGetPassPluginInfo() {
                 PB.registerPipelineParsingCallback(
                     [](llvm::StringRef Name, llvm::FunctionPassManager &FPM,
                        llvm::ArrayRef<llvm::PassBuilder::PipelineElement>) {
-                        FPM.addPass(Obfus());
+                        FPM.addPass(obfus::Obfus());
                         return true;
                     });
 
@@ -81,11 +86,11 @@ llvmGetPassPluginInfo() {
                 */
                 PB.registerPipelineStartEPCallback(
                     [](llvm::ModulePassManager &MPM) {
-                        MPM.addPass(createModuleToFunctionPassAdaptor(Obfus()));
+                        MPM.addPass(createModuleToFunctionPassAdaptor(obfus::Obfus()));
                     });
                 // PB.registerOptimizerLastEPCallback(
-                //     [](ModulePassManager &MPM, PassBuilder::OptimizationLevel) {
-                //         MPM.addPass(createModuleToFunctionPassAdaptor(Obfus()));
+                //     [](llvm::ModulePassManager &MPM, llvm::PassBuilder::OptimizationLevel) {
+                //         MPM.addPass(llvm::createModuleToFunctionPassAdaptor(obfus::Obfus()));
                 //     });
             }};
 }

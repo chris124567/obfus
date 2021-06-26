@@ -4,9 +4,11 @@
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/Function.h>
 
-struct Obfus : llvm::PassInfoMixin<Obfus> {
-public:
-    llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &);
-};
+namespace obfus {
+    struct Obfus : llvm::PassInfoMixin<Obfus> {
+    public:
+        llvm::PreservedAnalyses run(llvm::Function &F, llvm::FunctionAnalysisManager &);
+    };
+}
 
 #endif

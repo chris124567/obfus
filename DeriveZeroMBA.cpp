@@ -4,18 +4,27 @@
 
 #include <cmath>
 
-// implementation of https://link.springer.com/chapter/10.1007/F978-3-540-77535-5_5
+/*
+https://vx-underground.org/papers/VXUG/Mirrors/ObfuscationwithMixedBooleanArithmeticExpressionsreconstructionanalysisandsimplificationtools.pdf
+https://link.springer.com/chapter/10.1007/F978-3-540-77535-5_5
+*/
 
-// columns = vars count
-static const constexpr int kMaxVars = 4;
+/*
+columns = vars count
+This can be higher but we never use more than 3 due to
+performance reasons so it makes sense to just leave it as 3.
+If this is <= 3 FVEqualZero will be replaced with an unrolled
+expression which is very good for performance.
+*/
+static const constexpr int kMaxVars = 3;
 // rows = 2**vars
 static const constexpr int kMaxRows = 1 << kMaxVars;
 
-// check if F * v = 0: used to check nullspace if calculation is correct
-static __attribute__((const)) constexpr bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars], const int rows, const int columns) {
-    for (int row = 0; row < rows; row++) {
+// check if F * v = 0: used to check if nullspace attempt is correct
+static __attribute__((hot)) __attribute__((pure)) constexpr bool FVEqualsZero(const int matrix[kMaxRows][kMaxVars], const int vector[kMaxVars]) {
+    for (int row = 0; row < kMaxRows; row++) {
         int sum = 0;
-        for (int column = 0; column < columns; column++) {
+        for (int column = 0; column < kMaxVars; column++) {
             sum += matrix[row][column] * vector[column];
         }
         if (sum != 0) {
@@ -26,15 +35,26 @@ static __attribute__((const)) constexpr bool FVEqualsZero(const int matrix[kMaxR
 }
 
 namespace obfus {
+
 // generate expressions that equal 0 regardless of the value of the variables
 // pointers in vars should not be null
+// do not provide more than kMaxVars variables
 llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *type, const std::vector<llvm::Value *> &vars) {
-    // this many columns
-    const int vars_count = vars.size();
-    // 2**vars_count rows
-    const int rows_count = 1 << vars_count;
-    // 2 choices - 1 or -1
-    const int nullspace_attempts = pow(2, vars_count);
+    // 5% performance improvement to be had from just assigning this
+    // to kMaxVars but that would assuming you always had kMaxVars
+    // variables.  leaving it as vars.size() for flexibility even
+    // though we will likely always have 3 variables but we may use
+    // 2 for some things in the future.
+    // also note that vars_count should never exceed kMaxVars
+    // if you want to use 4 variables (much slower), you need to
+    // adjust kMaxVars
+    const int vars_count = vars.size();      // columns
+    const int rows_count = 1 << vars_count;  // 2**vars_count rows
+    // const int vars_count = kMaxVars;  // columns
+    // const int rows_count = kMaxRows;  // 2**vars_count rows
+
+    // 2 choices - 1 or -1.  rows_count already has this value (2**vars_count)
+    const int nullspace_attempts = rows_count;
 
     int F[kMaxRows][kMaxVars] = {{0}};
     int solutions[kMaxVars] = {0};
@@ -44,21 +64,30 @@ llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *t
         F[i][0] = (i >> (vars_count - 1)) & 1;
     }
 
+    // use std::rand to generate seed for faster xorshift generator
+    // generating valid solutions is the main bottleneck so we need
+    // it to be as fast as possible
+    uint64_t rand_seed = std::rand();
+
     bool found_solution = false;
     while (!found_solution) {
         for (int i = 0; i < rows_count; i++) {
             // random data:  j=1 ensures we dont overwrite truth table
             for (int j = 1; j < vars_count; j++) {
-                F[i][j] = std::rand() % 2;
+                // inline xorshift generator
+                rand_seed ^= rand_seed << 13;  // a
+                rand_seed ^= rand_seed >> 7;   // b
+                rand_seed ^= rand_seed << 17;  // c
+                F[i][j] = rand_seed % 2;
             }
         }
 
         // bruteforce nontrivial nullspace
         for (int i = 0; i < nullspace_attempts; i++) {
             for (int j = 0; j < vars_count; j++) {
-                solutions[j] = ((i >> (2 * j)) & 1) ? 1 : -1;
+                solutions[j] = ((i >> j) % 2) ? 1 : -1;
             }
-            found_solution = FVEqualsZero(F, solutions, rows_count, vars_count);
+            found_solution = FVEqualsZero(F, solutions);
             if (found_solution) {
                 break;
             }
