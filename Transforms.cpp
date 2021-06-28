@@ -1,8 +1,13 @@
 #include "Transforms.hpp"
 
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/Pass.h>
+#include <llvm/Transforms/Scalar.h>
 
 #include "DeriveZeroMBA.hpp"
+
+static const auto kReg2MemPass = llvm::createDemoteRegisterToMemoryPass();
 
 // zero_expr and x cannot be null
 static llvm::Value *GetObfuscatedValue(llvm::IRBuilder<> &builder, llvm::Value *zero_expr, llvm::Value *x) {
@@ -55,8 +60,8 @@ bool TransformBinaryOperatorBasicBlock(llvm::BasicBlock &BB) {
         std::vector<llvm::Value *> vars{const_operand, non_const_operand, llvm::ConstantInt::get(bin_op->getType(), std::rand() % 255)};
         // std::vector<llvm::Value *> vars{const_operand, non_const_operand, llvm::ConstantInt::get(bin_op->getType(), std::rand() % 255), llvm::ConstantInt::get(bin_op->getType(), std::rand() % 255)};
 
-        const auto zero_expr = obfus::GenerateRandomMBAIdentity(builder, bin_op->getType(), vars);
-        const auto x_expr = GetObfuscatedValue(builder, zero_expr, x);
+        const auto x_expr = GetObfuscatedValue(builder, obfus::GenerateRandomMBAIdentity(builder, bin_op->getType(), vars), x);
+        const auto y_expr = GetObfuscatedValue(builder, obfus::GenerateRandomMBAIdentity(builder, bin_op->getType(), vars), y);
 
 #ifdef DEBUG
         llvm::errs() << "Opcode: Instruction::" << I->getOpcodeName() << "\n";
@@ -64,19 +69,19 @@ bool TransformBinaryOperatorBasicBlock(llvm::BasicBlock &BB) {
         llvm::Value *new_value = nullptr;
         switch (I->getOpcode()) {
             case llvm::Instruction::Add:
-                new_value = builder.CreateAdd(x_expr, y);
+                new_value = builder.CreateAdd(x_expr, y_expr);
                 break;
             case llvm::Instruction::Sub:
-                new_value = builder.CreateSub(x_expr, y);
+                new_value = builder.CreateSub(x_expr, y_expr);
                 break;
             case llvm::Instruction::Xor:
-                new_value = builder.CreateXor(x_expr, y);
+                new_value = builder.CreateXor(x_expr, y_expr);
                 break;
             case llvm::Instruction::Or:
-                new_value = builder.CreateOr(x_expr, y);
+                new_value = builder.CreateOr(x_expr, y_expr);
                 break;
             case llvm::Instruction::And:
-                new_value = builder.CreateAnd(x_expr, y);
+                new_value = builder.CreateAnd(x_expr, y_expr);
                 break;
         }
         // if we have something to replace the instruction with, replace it
@@ -120,8 +125,8 @@ bool TransformIntegerConstants(llvm::BasicBlock &BB) {
 
         llvm::IRBuilder<> builder(icmp_op);
 
-        std::vector<llvm::Value *> vars{llvm::ConstantInt::get(int_type, std::rand() % 255), same};
-        // std::vector<llvm::Value *> vars{llvm::ConstantInt::get(int_type, std::rand() % 255), same, llvm::ConstantInt::get(int_type, std::rand() % 255)};
+        // std::vector<llvm::Value *> vars{llvm::ConstantInt::get(int_type, std::rand() % 255), same};
+        std::vector<llvm::Value *> vars{llvm::ConstantInt::get(int_type, std::rand() % 255), same, llvm::ConstantInt::get(int_type, std::rand() % 255)};
         // std::vector<llvm::Value *> vars{llvm::ConstantInt::get(int_type, std::rand() % 255), same, llvm::ConstantInt::get(int_type, std::rand() % 255), llvm::ConstantInt::get(int_type, std::rand() % 255)};
 
         const auto zero_expr = obfus::GenerateRandomMBAIdentity(builder, int_type, vars);
@@ -139,41 +144,118 @@ bool TransformIntegerConstants(llvm::BasicBlock &BB) {
     return changed;
 }
 
-bool TransformControlFlow(llvm::BasicBlock &BB) {
-    bool changed = false;
-
-    // see https://sci-hub.ee/https://link.springer.com/chapter/10.1007/978-3-540-77535-5_5
-    // TODO: turn integer constants into complex expressions
-    for (auto I = BB.begin(); I != BB.end(); ++I) {
-        const auto branch = llvm::dyn_cast<llvm::BranchInst>(I);
-        // ignore goto statements
-        if (!branch || !branch->isConditional() || !branch->getCondition()->getType()->isIntegerTy()) {
-            continue;
-        }
-        const auto icmp_op = llvm::dyn_cast<llvm::ICmpInst>(branch->getCondition());
-        if (!icmp_op || icmp_op->getNumOperands() != 2 || !icmp_op->getType()->isIntegerTy()) {
-            continue;
-        }
-
-#ifdef DEBUG
-        llvm::errs() << "Branch: " << icmp_op->getPredicate() << "\n";
-#endif
-        const auto x = icmp_op->getOperand(0);
-        const auto y = icmp_op->getOperand(1);
-        const auto int_type = x->getType();
-        llvm::IRBuilder<> builder(icmp_op);
-        std::vector<llvm::Value *> vars{x, y, llvm::ConstantInt::get(int_type, std::rand() % 255)};
-
-        const auto zero_expr_x = obfus::GenerateRandomMBAIdentity(builder, int_type, vars);
-        const auto zero_expr_y = obfus::GenerateRandomMBAIdentity(builder, int_type, vars);
-        const auto x_expr = GetObfuscatedValue(builder, zero_expr_y, x);
-        const auto y_expr = GetObfuscatedValue(builder, zero_expr_y, y);
-        icmp_op->setOperand(0, x_expr);
-        icmp_op->setOperand(1, y_expr);
-        changed = true;
+/*
+Source: https://github.com/chenx6/baby_obfuscator/blob/master/src/Flattening.cpp
+Copyright (c) 2020 chen_null
+Adjusted to fit the Google C++ style guide
+*/
+bool TransformFlatten(llvm::Function &F) {
+    // Only one BB in this Function
+    if (F.size() <= 1) {
+        return false;
     }
 
-    return changed;
+    // Insert All BB into original_bb
+    llvm::SmallVector<llvm::BasicBlock *, 0> original_bb;
+    for (auto &BB : F) {
+        original_bb.emplace_back(&BB);
+        if (llvm::isa<llvm::InvokeInst>(BB.getTerminator())) {
+            return false;
+        }
+    }
+
+    // Remove first BB
+    original_bb.erase(original_bb.begin());
+
+    // If first_bb's terminator is BranchInst, then split into two blocks
+    const auto first_bb = &*F.begin();
+    const auto first_bb_terminator = first_bb->getTerminator();
+    if (llvm::isa<llvm::BranchInst>(first_bb_terminator) ||
+        llvm::isa<llvm::IndirectBrInst>(first_bb_terminator)) {
+        llvm::BasicBlock::iterator iter = first_bb->end();
+        if (first_bb->size() > 1) {
+            --iter;
+        }
+        const auto temp_bb = first_bb->splitBasicBlock(--iter);
+        original_bb.insert(original_bb.begin(), temp_bb);
+    }
+
+    // Remove first_bb
+    first_bb->getTerminator()->eraseFromParent();
+
+    // Create main loop
+    const auto loop_entry = llvm::BasicBlock::Create(F.getContext(), "Entry", &F);
+    const auto loop_end = llvm::BasicBlock::Create(F.getContext(), "End", &F);
+    const auto sw_default = llvm::BasicBlock::Create(F.getContext(), "Default", &F);
+    // Create switch variable
+    llvm::IRBuilder<> entry_builder(first_bb, first_bb->end());
+    const auto sw_ptr = entry_builder.CreateAlloca(entry_builder.getInt32Ty());
+    const auto store_rng = entry_builder.CreateStore(entry_builder.getInt32(std::rand()), sw_ptr);
+    entry_builder.CreateBr(loop_entry);
+    // Create switch statement
+    llvm::IRBuilder<> sw_builder(loop_entry);
+    const auto sw_inst = sw_builder.CreateSwitch(sw_builder.CreateLoad(sw_ptr), sw_default, 0);
+    llvm::BranchInst::Create(loop_entry, sw_default);
+    llvm::BranchInst::Create(loop_entry, loop_end);
+
+    // Put all BB into switch Instruction
+    // using a ref here makes no sense because orginal_bb already uses pointers
+    for (const auto BB : original_bb) {
+        BB->moveBefore(loop_end);
+        sw_inst->addCase(sw_builder.getInt32(std::rand()), BB);
+    }
+
+    // Recalculate switch Instruction
+    for (const auto BB : original_bb) {
+        switch (BB->getTerminator()->getNumSuccessors()) {
+            case 0:
+                // No terminator
+                break;
+            case 1: {
+                // Terminator is a non-condition jump
+                const auto terminator = BB->getTerminator();
+                // Find successor's case condition
+                auto case_num = sw_inst->findCaseDest(terminator->getSuccessor(0));
+                if (case_num == nullptr) {
+                    case_num = sw_builder.getInt32(std::rand());
+                }
+                // Connect this BB to successor
+                llvm::IRBuilder<> case_builder(BB, BB->end());
+                case_builder.CreateStore(case_num, sw_ptr);
+                case_builder.CreateBr(loop_end);
+                terminator->eraseFromParent();
+            } break;
+            case 2: {
+                // Terminator is a condition jump
+                const auto terminator = BB->getTerminator();
+                auto truecase_num = sw_inst->findCaseDest(terminator->getSuccessor(0));
+                auto falsecase_num = sw_inst->findCaseDest(terminator->getSuccessor(1));
+                if (truecase_num == nullptr) {
+                    truecase_num = sw_builder.getInt32(std::rand());
+                }
+                if (falsecase_num == nullptr) {
+                    falsecase_num = sw_builder.getInt32(std::rand());
+                }
+                llvm::IRBuilder<> case_builder(BB, BB->end());
+                if (llvm::BranchInst *endBr = llvm::dyn_cast<llvm::BranchInst>(BB->getTerminator())) {
+                    // Select the next BB to be executed
+                    case_builder.CreateStore(case_builder.CreateSelect(endBr->getCondition(), truecase_num, falsecase_num), sw_ptr);
+                    case_builder.CreateBr(loop_end);
+                    terminator->eraseFromParent();
+                }
+            } break;
+        }
+    }
+    // Set sw_var's origin value, let the first BB executed first
+    store_rng->setOperand(0, sw_inst->findCaseDest(*original_bb.begin()));
+
+    // Demote register and phi to memory
+    kReg2MemPass->runOnFunction(F);
+
+#ifdef DEBUG
+    llvm::errs() << "Flattened: " << F.getName() << "!\n";
+#endif
+    return true;
 }
 
 }  // namespace obfus

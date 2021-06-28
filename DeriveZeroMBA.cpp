@@ -85,7 +85,9 @@ llvm::Value *GenerateRandomMBAIdentity(llvm::IRBuilder<> &builder, llvm::Type *t
         // bruteforce nontrivial nullspace
         for (int i = 0; i < nullspace_attempts; i++) {
             for (int j = 0; j < vars_count; j++) {
-                solutions[j] = ((i >> j) % 2) ? 1 : -1;
+                // solutions[j] = ((i >> j) % 2) ? 1 : -1;
+                // branchless version:
+                solutions[j] = (((i >> j) % 2) * 2) - 1;
             }
             found_solution = FVEqualsZero(F, solutions);
             if (found_solution) {

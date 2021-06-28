@@ -2,6 +2,7 @@
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/PassPlugin.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
@@ -28,20 +29,22 @@ llvm::PreservedAnalyses Obfus::run(llvm::Function &F, llvm::FunctionAnalysisMana
     llvm::errs() << "Attempting " << name << "\n";
 #endif
 
+    changed |= obfus::TransformFlatten(F);
     for (auto &BB : F) {
         // ORIGINAL ORDER:
         // changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
         // changed |= obfus::TransformIntegerConstants(BB);
-        // changed |= obfus::TransformControlFlow(BB);
+        // changed |= obfus::TransformFlatten(BB);
         // NEW ORDER:
-        // changed |= obfus::TransformIntegerConstants(BB);
-        // changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
-        changed |= obfus::TransformControlFlow(BB);
+        changed |= obfus::TransformBinaryOperatorBasicBlock(BB);
+        changed |= obfus::TransformIntegerConstants(BB);
     }
-
 #ifdef DEBUG
     if (changed) {
-        llvm::errs() << "Obfuscated " << F.getName() << "\n";
+        // llvm::verifyFunction comment:
+        // "Note that this function's return value is inverted from what you would expect of a function called "verify"."
+        llvm::errs() << "Obfuscated " << F.getName() << " (verified: " << (llvm::verifyFunction(F) ? "false" : "true")
+                     << ")\n";
     } else {
         llvm::errs() << "Did not change " << F.getName() << "\n";
     }
@@ -51,12 +54,11 @@ llvm::PreservedAnalyses Obfus::run(llvm::Function &F, llvm::FunctionAnalysisMana
 }
 }  // namespace obfus
 
-extern "C" LLVM_ATTRIBUTE_WEAK llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
+extern "C" LLVM_ATTRIBUTE_WEAK llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() {
     return {LLVM_PLUGIN_API_VERSION, "Obfus Pass", LLVM_VERSION_STRING,
             [](llvm::PassBuilder &PB) {
-                // const constexpr int seed = 1;
-                const int seed = std::time(nullptr);
+                const constexpr int seed = 1;
+                // const int seed = std::time(nullptr);
                 srand(seed);
 
 #ifdef DEBUG

@@ -2,30 +2,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int __attribute__((const)) __attribute__((optnone)) add(const int x, const int y) {
+static int __attribute__((const)) __attribute__((optnone)) add(const int x, const int y) {
     return x + y;
 }
 
-int __attribute__((const)) __attribute__((optnone)) sub(const int x, const int y) {
+static int __attribute__((const)) __attribute__((optnone)) sub(const int x, const int y) {
     return x - y;
 }
 
 /*
 "1" suffix after names to prevent weird clang-format glitch
 */
-int __attribute__((const)) __attribute__((optnone)) xor1(const int x, const int y) {
+static int __attribute__((const)) __attribute__((optnone)) xor1(const int x, const int y) {
     return x ^ y;
 }
 
-int __attribute__((const)) __attribute__((optnone)) or1(const int x, const int y) {
+static int __attribute__((const)) __attribute__((optnone)) or1(const int x, const int y) {
     return x | y;
 }
 
-int __attribute__((const)) __attribute__((optnone)) and1(const int x, const int y) {
+static int __attribute__((const)) __attribute__((optnone)) and1(const int x, const int y) {
     return x & y;
 }
 
-int __attribute__((const)) __attribute__((optnone)) password(const int input) {
+static int __attribute__((const)) __attribute__((optnone)) password(const int input) {
     if (input >= 0 && input < 5 && (input & 1) == 0) {
         return 1337;
     } else {
@@ -33,7 +33,7 @@ int __attribute__((const)) __attribute__((optnone)) password(const int input) {
     }
 }
 
-uint8_t __attribute__((const)) __attribute__((optnone)) password8(const uint8_t input) {
+static uint8_t __attribute__((const)) __attribute__((optnone)) password8(const uint8_t input) {
     if (input >= 0 && input < 5 && (input & 1) == 0) {
         return 111;
     } else {
@@ -41,7 +41,7 @@ uint8_t __attribute__((const)) __attribute__((optnone)) password8(const uint8_t 
     }
 }
 
-int16_t __attribute__((const)) __attribute__((optnone)) password16(const int16_t input) {
+static int16_t __attribute__((const)) __attribute__((optnone)) password16(const int16_t input) {
     if (input >= 0 && input < 5 && (input & 1) == 0) {
         return 5000;
     } else {
@@ -49,7 +49,7 @@ int16_t __attribute__((const)) __attribute__((optnone)) password16(const int16_t
     }
 }
 
-int __attribute__((const)) __attribute__((optnone)) return5000(void) {
+static int __attribute__((const)) __attribute__((optnone)) return5000(void) {
     return 5000;
 }
 
